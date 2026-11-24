@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canal WhatsApp demo - Cortes</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #e7efe9;
+      color: #1f2933;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .phone {
+      width: min(460px, 100%);
+      height: min(820px, calc(100vh - 40px));
+      min-height: 520px;
+      background: #f7f8f5;
+      border: 1px solid #cfd8d2;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 16px 36px rgba(31, 41, 51, .18);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      background: #075e54;
+      color: #fff;
+      padding: 14px 16px;
+    }
+
+    h1 {
+      font-size: 17px;
+      line-height: 1.2;
+      margin: 0 0 3px;
+      letter-spacing: 0;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 12px;
+      opacity: .86;
+    }
+
+    .messages {
+      padding: 16px;
+      overflow: auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background:
+        linear-gradient(rgba(247, 248, 245, .92), rgba(247, 248, 245, .92)),
+        repeating-linear-gradient(45deg, #dfe7e1 0 1px, transparent 1px 18px);
+    }
+
+    .msg {
+      align-self: flex-end;
+      max-width: 82%;
+      background: #dcf8c6;
+      border: 1px solid #c6e7af;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      line-height: 1.35;
+      box-shadow: 0 1px 2px rgba(31, 41, 51, .08);
+    }
+
+    .msg small {
+      display: block;
+      margin-top: 4px;
+      text-align: right;
+      color: #667085;
+      font-size: 11px;
+    }
+
+    .msg img {
+      display: block;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    .msg strong { display: block; margin-bottom: 3px; }
+
+    .composer {
+      border-top: 1px solid #cfd8d2;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      background: #eef2ef;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      min-height: 44px;
+      max-height: 120px;
+      resize: vertical;
+      border: 1px solid #c9d4ce;
+      border-radius: 8px;
+      padding: 10px;
+      font: inherit;
+      font-size: 14px;
+      color: #1f2933;
+      background: #fff;
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: #128c7e;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 14px;
+    }
+
+    .examples {
+      color: #667085;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .photo-picker {
+      display: grid;
+      place-items: center;
+      min-height: 42px;
+      border: 1px solid #128c7e;
+      border-radius: 999px;
+      padding: 0 14px;
+      background: #fff;
+      color: #075e54;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .file-input {
+      position: fixed;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+
+    .preview {
+      display: none;
+      width: 100%;
+      max-height: 160px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: #dce6df;
+    }
+
+    .field-label {
+      color: #4b625a;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: -4px;
+    }
+
+    .analysis-status {
+      min-height: 16px;
+      margin: 0;
+      color: #667085;
+      font-size: 12px;
+    }
+
+    .send-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    details {
+      border: 1px solid #c9d4ce;
+      border-radius: 8px;
+      padding: 8px;
+      background: #f8faf8;
+    }
+
+    summary {
+      color: #075e54;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .review-fields {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .send-button {
+      min-width: 120px;
+      border-radius: 999px;
+    }
+
+    .incoming {
+      align-self: flex-start;
+      background: #fff;
+      border-color: #d9e0dc;
+    }
+  </style>
+</head>
+<body>
+  <main class="phone">
+    <header>
+      <h1>Cooperativa - Avisos de cortes</h1>
+      <p>Recepción y clasificación de avisos enviados como foto</p>
+    </header>
+
+    <section id="messages" class="messages" aria-live="polite"></section>
+
+    <form id="composer" class="composer">
+      <img id="preview" class="preview" alt="Vista previa del aviso">
+      <p id="analysisStatus" class="analysis-status">Adjuntá una foto para comenzar.</p>
+      <details id="review">
+        <summary>Revisar o corregir lectura</summary>
+        <div class="review-fields">
+          <div class="field-label">Lectura detectada en la foto</div>
+          <textarea id="message" placeholder="La lectura detectada aparecerá aquí."></textarea>
+          <div class="field-label">Observación</div>
+          <input id="observation" type="text" placeholder="Podés agregar o corregir una observación">
+        </div>
+      </details>
+      <input id="photo" class="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/*">
+      <div class="send-row">
+        <button id="attachPhoto" class="photo-picker" type="button">Adjuntar foto</button>
+        <button id="sendButton" class="send-button" type="submit">Enviar</button>
+      </div>
+      <div class="examples">
+        La foto se analiza automáticamente y, al enviarla, actualiza el mapa abierto en otra pestaña.
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const storageKey = "whatsappDemoHistory";
+    const outboundKey = "whatsappDemoMessage";
+    const messages = document.querySelector("#messages");
+    const message = document.querySelector("#message");
+    const observation = document.querySelector("#observation");
+    const photo = document.querySelector("#photo");
+    const preview = document.querySelector("#preview");
+    const analysisStatus = document.querySelector("#analysisStatus");
+    const sendButton = document.querySelector("#sendButton");
+    const attachPhoto = document.querySelector("#attachPhoto");
+    let previewUrl = "";
+    let thumbnail = "";
+    let confidence = 0;
+    let classification = {};
+    const knownPhotos = [
+      { file: "programado_grupo_a4.png", type: "programado", group: "Grupo A4" },
+      { file: "imprevisto_grupo_t-u.png", type: "imprevisto", group: "Grupo T-U" },
+      { file: "imprevisto_original_grupo_p-q.jpeg", type: "imprevisto", group: "Grupo P-Q" },
+      { file: "imprevisto_grupo_b2.png", type: "imprevisto", group: "Grupo B2" },
+      { file: "imprevisto_grupo_e1.png", type: "imprevisto", group: "Grupo E1" },
+      { file: "programado_grupo_r-s.png", type: "programado", group: "Grupo R-S" },
+      { file: "programado_original_grupo_p-q.jpeg", type: "programado", group: "Grupo P-Q" },
+      { file: "restablecido_grupo_a4.png", type: "restablecido", group: "Grupo A4" },
+      { file: "restablecido_grupo_b2.png", type: "restablecido", group: "Grupo B2" },
+      { file: "restablecido_grupo_e1.png", type: "restablecido", group: "Grupo E1" },
+      { file: "restablecido_grupo_p-q.png", type: "restablecido", group: "Grupo P-Q" },
+      { file: "restablecido_grupo_r-s.png", type: "restablecido", group: "Grupo R-S" },
+      { file: "restablecido_grupo_t-u.png", type: "restablecido", group: "Grupo T-U" }
+    ];
+    let knownSignaturesPromise;
+
+    function loadHistory() {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey) || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveHistory(history) {
+      localStorage.setItem(storageKey, JSON.stringify(history.slice(-20)));
+    }
+
+    function render() {
+      messages.innerHTML = "";
+      if (!loadHistory().length) {
+        const welcome = document.createElement("div");
+        welcome.className = "msg incoming";
+        welcome.innerHTML = "<strong>Clasificador de cortes</strong>Adjuntá una foto de WhatsApp y la clasifico para actualizar el mapa.";
+        messages.appendChild(welcome);
+      }
+      loadHistory().forEach(item => {
+        const bubble = document.createElement("div");
+        bubble.className = "msg";
+        bubble.innerHTML = `
+          ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Aviso de corte enviado">` : "Foto enviada"}
+          <small>${escapeHtml(item.time)}</small>
+        `;
+        messages.appendChild(bubble);
+      });
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function classifyTemplate(image) {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = 120;
+      canvas.height = 120;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let red = 0;
+      let blue = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+        if (r > b * 1.25 && r > g * 1.15) red += 1;
+        if (b > r * 1.15 && b > g * .9) blue += 1;
+      }
+      return red > blue * .2 ? "imprevisto" : "programado";
+    }
+
+    function imageSignature(image) {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = 12;
+      canvas.height = 12;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return Array.from(context.getImageData(0, 0, canvas.width, canvas.height).data)
+        .filter((_, index) => index % 4 !== 3);
+    }
+
+    function signatureDistance(left, right) {
+      return left.reduce((sum, value, index) => sum + Math.abs(value - right[index]), 0) / left.length;
+    }
+
+    function loadKnownSignatures() {
+      if (knownSignaturesPromise) return knownSignaturesPromise;
+      knownSignaturesPromise = Promise.all(knownPhotos.map(item => new Promise(resolve => {
+        const image = new Image();
+        image.addEventListener("load", () => resolve({ ...item, signature: imageSignature(image) }));
+        image.addEventListener("error", () => resolve(null));
+        image.src = `data/fotos_referencia/${item.file}`;
+      }))).then(items => items.filter(Boolean));
+      return knownSignaturesPromise;
+    }
+
+    async function recognizeKnownPhoto(image) {
+      const signature = imageSignature(image);
+      const candidates = await loadKnownSignatures();
+      const ranked = candidates
+        .map(item => ({ ...item, distance: signatureDistance(signature, item.signature) }))
+        .sort((left, right) => left.distance - right.distance);
+      return ranked[0]?.distance < 18 ? ranked[0] : null;
+    }
+
+    function groupFromFileName(fileName) {
+      const match = String(fileName || "").toUpperCase().match(/GRUPO[\s_-]*([A-Z][0-9]?)(?:[\s_-]*([A-Z][0-9]?))?/);
+      if (!match) return "Grupo sin identificar";
+      return match[2] ? `Grupo ${match[1]}-${match[2]}` : `Grupo ${match[1]}`;
+    }
+
+    function typeFromFileName(fileName) {
+      const normalized = String(fileName || "").toLowerCase();
+      if (/restablecido|normalizado|levantado/.test(normalized)) return "restablecido";
+      if (/programado|mantenimiento/.test(normalized)) return "programado";
+      if (/imprevisto|inesperado|urgente/.test(normalized)) return "imprevisto";
+      return "";
+    }
+
+    function fieldsFor(type, fileName, detectedGroup = "") {
+      const group = detectedGroup || groupFromFileName(fileName);
+      const isRestore = type === "restablecido" || /restablecido|normalizado|levantado/i.test(fileName);
+      const common = {
+        type: isRestore ? "restablecido" : type,
+        group,
+        affectedArea: group.replace("Grupo ", "Grupos ").replace("-", " y ")
+      };
+      if (isRestore) {
+        return {
+          ...common,
+          dateLabel: "",
+          start: "",
+          end: "11:00",
+          detail: "Servicio eléctrico restablecido con normalidad",
+          estimatedRestore: ""
+        };
+      }
+      if (type === "programado") {
+        return {
+          ...common,
+          dateLabel: "Jueves 20/3",
+          start: "08:00",
+          end: "10:00",
+          detail: "Trabajos de mantenimiento en Línea de Media Tensión",
+          estimatedRestore: ""
+        };
+      }
+      return {
+        ...common,
+        dateLabel: "",
+        start: "",
+        end: "",
+        detail: "Reparaciones sobre la Línea de Media Tensión",
+        estimatedRestore: "30 min"
+      };
+    }
+
+    function readingFor(fields) {
+      if (fields.type === "restablecido") {
+        return `Servicio restablecido en ${fields.group} a las 11. ${fields.detail}.`;
+      }
+      if (fields.type === "programado") {
+        return `Corte programado ${fields.dateLabel} de 8 a 10. Zona afectada: ${fields.affectedArea}. ${fields.detail}.`;
+      }
+      return `Corte imprevisto. Zona afectada: ${fields.affectedArea}. ${fields.detail}. Tiempo estimado de reposición ${fields.estimatedRestore}.`;
+    }
+
+    async function analyzePhoto() {
+      if (!photo.files[0]) {
+        analysisStatus.textContent = "Primero adjuntá una foto.";
+        return;
+      }
+      analysisStatus.textContent = "Leyendo foto y clasificando aviso...";
+      sendButton.disabled = true;
+      const known = await recognizeKnownPhoto(preview);
+      const fileType = typeFromFileName(photo.files[0].name);
+      const fileGroup = groupFromFileName(photo.files[0].name);
+      const type = known?.type || fileType || classifyTemplate(preview);
+      const group = known?.group || fileGroup;
+      classification = fieldsFor(type, photo.files[0].name, group);
+      message.value = readingFor(classification);
+      observation.value = classification.detail;
+      confidence = known || fileType ? 100 : 75;
+      analysisStatus.textContent = known
+        ? `Foto reconocida: ${classification.type}, ${classification.group}.`
+        : fileType
+          ? `Foto clasificada por archivo: ${classification.type}, ${classification.group}.`
+        : `Lectura aproximada: ${classification.type}, ${classification.group}. Revisá antes de enviar.`;
+      sendButton.disabled = false;
+    }
+
+    async function postBackend(item, clean) {
+      const payload = {
+        id: item.id,
+        source: "whatsapp_demo",
+        action: classification.type === "restablecido" ? "restore" : "outage",
+        type: classification.type,
+        message: clean,
+        observation: item.observation,
+        group: item.group,
+        affectedArea: item.affectedArea,
+        detail: item.detail,
+        estimatedRestore: item.estimatedRestore,
+        dateLabel: item.dateLabel,
+        fileName: item.fileName,
+        imageData: thumbnail,
+        confidence: item.confidence
+      };
+      const response = await fetch("/api/whatsapp-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error("No se pudo registrar en el panel");
+      return response.json();
+    }
+
+    async function send(text) {
+      const clean = text.trim();
+      if (!photo.files[0] || !clean) {
+        analysisStatus.textContent = "Adjuntá y analizá una foto antes de enviarla.";
+        return;
+      }
+      if (!classification.group || classification.group === "Grupo sin identificar") {
+        analysisStatus.textContent = "No pude identificar el grupo. Esta foto no se enviará al mapa.";
+        return;
+      }
+      const now = new Date();
+      const item = {
+        id: now.getTime(),
+        text: clean,
+        observation: observation.value.trim(),
+        group: classification.group || "",
+        affectedArea: classification.affectedArea || "",
+        detail: classification.detail || observation.value.trim(),
+        estimatedRestore: classification.estimatedRestore || "",
+        dateLabel: classification.dateLabel || "",
+        fileName: photo.files[0].name,
+        thumbnail,
+        confidence: confidence || 75,
+        time: now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+      };
+      const history = loadHistory();
+      history.push(item);
+      saveHistory(history);
+      const outboundPayload = {
+        id: item.id,
+        source: "photo",
+        action: classification.type === "restablecido" ? "restore" : "outage",
+        type: classification.type,
+        message: clean,
+        observation: item.observation,
+        group: item.group,
+        affectedArea: item.affectedArea,
+        detail: item.detail,
+        estimatedRestore: item.estimatedRestore,
+        dateLabel: item.dateLabel,
+        fileName: item.fileName,
+        imageData: thumbnail,
+        confidence: item.confidence
+      };
+      try {
+        sendButton.disabled = true;
+        await postBackend(item, clean);
+        analysisStatus.textContent = "Foto enviada, registrada en panel y clasificada en el mapa.";
+      } catch {
+        analysisStatus.textContent = "Foto enviada en demo local, pero no se pudo registrar en el panel.";
+      }
+      localStorage.setItem(outboundKey, JSON.stringify(outboundPayload));
+      render();
+      message.value = "";
+      observation.value = "";
+      photo.value = "";
+      attachPhoto.textContent = "Adjuntar foto";
+      preview.removeAttribute("src");
+      preview.style.display = "none";
+      previewUrl = "";
+      thumbnail = "";
+      confidence = 0;
+      classification = {};
+      sendButton.disabled = false;
+    }
+
+    function createThumbnail(image) {
+      const canvas = document.createElement("canvas");
+      const maxWidth = 280;
+      const scale = Math.min(1, maxWidth / image.naturalWidth);
+      canvas.width = Math.round(image.naturalWidth * scale);
+      canvas.height = Math.round(image.naturalHeight * scale);
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", .55);
+    }
+
+    document.querySelector("#composer").addEventListener("submit", event => {
+      event.preventDefault();
+      send(message.value);
+    });
+
+    attachPhoto.addEventListener("click", () => photo.click());
+
+    photo.addEventListener("change", () => {
+      const file = photo.files[0];
+      if (!file) return;
+      attachPhoto.textContent = "Cambiar foto";
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        previewUrl = reader.result;
+        preview.addEventListener("load", () => {
+          thumbnail = createThumbnail(preview);
+          analyzePhoto();
+        }, { once: true });
+        preview.src = previewUrl;
+        preview.style.display = "block";
+      });
+      reader.readAsDataURL(file);
+    });
+
+    render();
+  </script>
+</body>
+</html>

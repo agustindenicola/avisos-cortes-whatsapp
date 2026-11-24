@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calles WSP detectadas</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: Inter, "Segoe UI", Arial, sans-serif; }
+    .app { display: grid; grid-template-columns: 330px 1fr; height: 100%; }
+    aside { padding: 14px; border-right: 1px solid #d7dee6; background: #fff; overflow: auto; }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    p { margin: 0 0 12px; color: #667085; font-size: 13px; line-height: 1.35; }
+    select { width: 100%; min-height: 40px; border: 1px solid #d7dee6; border-radius: 8px; padding: 0 10px; font: inherit; }
+    .list { display: grid; gap: 7px; margin-top: 12px; }
+    .row { border: 1px solid #d7dee6; border-radius: 8px; padding: 8px; font-size: 12px; line-height: 1.35; }
+    .row strong { display: block; font-size: 13px; }
+    #map { height: 100%; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside>
+      <h1>Calles WSP detectadas</h1>
+      <p>Visualiza las calles encontradas para cada perímetro de la cooperativa. Sirve para validar antes de guardar polígonos.</p>
+      <select id="groupSelect"></select>
+      <div id="list" class="list"></div>
+    </aside>
+    <section id="map"></section>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([-34.095, -59.025], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    const palette = ["#d62828", "#0077b6", "#2a9d8f", "#f77f00", "#6a4c93", "#118ab2"];
+    const groupSelect = document.querySelector("#groupSelect");
+    const list = document.querySelector("#list");
+    let streetData = null;
+    let perimeterData = null;
+    let routeData = null;
+    let layer = null;
+    let perimeterLayer = null;
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function renderGroup(group) {
+      if (layer) layer.removeFrom(map);
+      if (perimeterLayer) perimeterLayer.removeFrom(map);
+      const features = streetData.features.filter(feature => feature.properties.group === group);
+      const perimeterFeatures = (perimeterData?.features || []).filter(feature => feature.properties.group === group);
+      const routeFeatures = (routeData?.features || []).filter(feature => feature.properties.group === group);
+      perimeterLayer = L.geoJSON({ type: "FeatureCollection", features: perimeterFeatures }, {
+        style: { color: "#d62828", weight: 2, opacity: .45, fillColor: "#d62828", fillOpacity: .08 },
+        onEachFeature(feature, itemLayer) {
+          const p = feature.properties;
+          itemLayer.bindPopup(`<strong>${escapeHtml(p.label)} · envolvente borrador</strong><br>${escapeHtml(p.term)}<br>${escapeHtml((p.streets || []).join(", "))}`);
+        }
+      }).addTo(map);
+      const routeLayer = L.geoJSON({ type: "FeatureCollection", features: routeFeatures }, {
+        style: { color: "#0f766e", weight: 4, opacity: .95, fillColor: "#0f766e", fillOpacity: .2 },
+        onEachFeature(feature, itemLayer) {
+          const p = feature.properties;
+          itemLayer.bindPopup(`<strong>${escapeHtml(p.label)} · ruta borrador</strong><br>${escapeHtml(p.note)}<br>Cierre: ${escapeHtml((p.alternate_path_streets || []).join(", "))}`);
+        }
+      }).addTo(map);
+      layer = L.geoJSON({ type: "FeatureCollection", features }, {
+        style(feature) {
+          const index = [...new Set(features.map(item => item.properties.phrase))].indexOf(feature.properties.phrase);
+          return { color: palette[index % palette.length], weight: 5, opacity: .86 };
+        },
+        onEachFeature(feature, itemLayer) {
+          const p = feature.properties;
+          itemLayer.bindPopup(`<strong>${escapeHtml(p.street_name)}</strong><br>${escapeHtml(p.term)}<br>${escapeHtml(p.phrase)}`);
+        }
+      }).addTo(map);
+      const bounds = L.featureGroup([layer, perimeterLayer, routeLayer].filter(item => item.getLayers().length)).getBounds();
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [28, 28] });
+
+      list.innerHTML = features.map(feature => `
+        <div class="row">
+          <strong>${escapeHtml(feature.properties.street_name)}</strong>
+          ${escapeHtml(feature.properties.phrase)}<br>
+          ${escapeHtml(feature.properties.term)}
+        </div>
+      `).join("") || '<div class="row">Sin calles detectadas</div>';
+    }
+
+    Promise.all([
+      fetch("data/grupos_wsp_calles_detectadas.geojson").then(response => response.json()),
+      fetch("data/grupos_wsp_perimetros.geojson").then(response => response.ok ? response.json() : null).catch(() => null),
+      fetch("data/grupos_wsp_perimetros_ruta.geojson").then(response => response.ok ? response.json() : null).catch(() => null)
+    ])
+      .then(([data, perimeters, routes]) => {
+        streetData = data;
+        perimeterData = perimeters;
+        routeData = routes;
+        const groups = [...new Set(data.features.map(feature => feature.properties.group))];
+        groupSelect.innerHTML = groups.map(group => `<option value="${escapeHtml(group)}">Grupo ${escapeHtml(group)}</option>`).join("");
+        groupSelect.addEventListener("change", () => renderGroup(groupSelect.value));
+        renderGroup(groups[0] || "");
+      });
+  </script>
+</body>
+</html>

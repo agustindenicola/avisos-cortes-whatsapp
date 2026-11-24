@@ -1,0 +1,15 @@
+[Unit]
+Description=Municipio Ciudad - Cloudflare Tunnel
+After=network-online.target municipio-ciudad.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/agustin/municipio-ciudad
+EnvironmentFile=-/home/agustin/municipio-ciudad/.env
+ExecStart=/home/agustin/municipio-ciudad/deploy/run_cloudflare.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,3371 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>Mapa de instituciones de Ciudad</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <style>
+    :root {
+      --bg: #eef2f8;
+      --panel: #ffffff;
+      --panel-soft: #f7f8fc;
+      --text: #17213a;
+      --muted: #66708a;
+      --line: #d8ddeb;
+      --accent: #4e5ab8;
+      --accent-strong: #3f2f8f;
+      --blue: #3577c7;
+      --brand-violet: #7a2c91;
+      --brand-magenta: #9a3aa4;
+      --logo-cyan: #3577c7;
+      --logo-green: #6d62bf;
+      --logo-yellow: #ffd437;
+      --logo-orange: #ff8c28;
+      --logo-red: #ef4a3c;
+      --danger: #d62828;
+      --warning: #f77f00;
+      --brand-gradient: linear-gradient(135deg, var(--blue), var(--accent), var(--brand-violet));
+      --shadow: 0 16px 36px rgba(44, 52, 116, .14);
+      --soft-shadow: 0 8px 22px rgba(44, 52, 116, .09);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    body {
+      font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      min-height: 520px;
+    }
+
+    aside {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 18px;
+      background: rgba(255,255,255,.96);
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 16px;
+      overflow: visible;
+      z-index: 500;
+      box-shadow: 0 10px 24px rgba(23, 33, 43, .09);
+    }
+
+    .panel-section {
+      position: relative;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      margin: 0;
+      overflow: visible;
+    }
+
+    .panel-section summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 12px;
+      cursor: pointer;
+      border: 1px solid rgba(78, 90, 184, .24);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(53,119,199,.10), rgba(78,90,184,.10), rgba(122,44,145,.08)),
+        #ffffff;
+      color: var(--accent-strong);
+      font-size: 13px;
+      font-weight: 900;
+      list-style: none;
+      white-space: nowrap;
+      box-shadow: 0 1px 0 rgba(255,255,255,.9) inset;
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    .panel-section summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .panel-section summary::after {
+      content: "▾";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(122, 44, 145, .12);
+      color: var(--brand-violet);
+      font-size: 10px;
+      line-height: 1;
+      flex: 0 0 auto;
+      transition: transform .16s ease;
+    }
+
+    .panel-section[open] summary,
+    .panel-section summary:hover {
+      border-color: rgba(122, 44, 145, .38);
+      background:
+        linear-gradient(135deg, rgba(53,119,199,.14), rgba(78,90,184,.16), rgba(122,44,145,.12)),
+        #ffffff;
+      color: var(--accent-strong);
+      box-shadow: 0 6px 14px rgba(23, 33, 43, .08);
+    }
+
+    .panel-section[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .panel-section-body {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: min(360px, calc(100vw - 28px));
+      max-height: calc(100vh - 116px);
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.98);
+      box-shadow: 0 18px 42px rgba(23, 33, 43, .16);
+      z-index: 900;
+    }
+
+    .panel-section.align-right .panel-section-body {
+      left: auto;
+      right: 0;
+    }
+
+    .map-topbar-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .map-topbar-main .municipal-footer.top {
+      position: static;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      flex: 0 0 auto;
+    }
+
+    .map-topbar-main .municipal-footer.top img {
+      width: 188px;
+      max-height: 62px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    .map-topbar-main .municipal-footer.top strong {
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .map-topbar-main .municipal-footer.top span {
+      display: block;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .map-topbar-main header {
+      min-width: 0;
+    }
+
+    .panel-body {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .panel-scroll-hint {
+      min-width: 0;
+    }
+
+    .topbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .topbar-stats {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      line-height: 1.15;
+      margin: 0 0 6px;
+      letter-spacing: 0;
+      background: var(--brand-gradient);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    header p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .stats {
+      display: flex;
+      gap: 6px;
+      margin: 0;
+    }
+
+    .stat {
+      border: 1px solid rgba(215, 222, 230, .82);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
+      min-width: 72px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .current-ops {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      border: 1px solid rgba(18, 184, 204, .28);
+      border-radius: 8px;
+      padding: 10px;
+      background: #ffffff;
+      box-shadow: var(--soft-shadow);
+    }
+
+    .current-ops h2 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .ops-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .ops-metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: var(--panel-soft);
+    }
+
+    .ops-metric strong {
+      display: block;
+      font-size: 19px;
+    }
+
+    .ops-metric span,
+    .ops-sync {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .ops-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .ops-actions button {
+      min-height: 36px;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    .ops-sync {
+      display: block;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(255,255,255,.9) inset;
+    }
+
+    input[type="search"]:focus {
+      border-color: var(--logo-cyan);
+      box-shadow: 0 0 0 3px rgba(18, 184, 204, .16);
+      outline: 0;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(18,184,204,.07), rgba(140,207,89,.07), rgba(255,212,55,.07)),
+        #fff;
+      color: #126b68;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    @media (hover: hover) {
+      button:hover {
+        border-color: var(--logo-orange);
+        box-shadow: 0 6px 14px rgba(23, 33, 43, .08);
+        transform: translateY(-1px);
+      }
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .rubros {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 8px;
+      padding-bottom: 4px;
+    }
+
+    .search-results {
+      display: grid;
+      gap: 6px;
+      max-height: 230px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+
+    .search-result {
+      display: grid;
+      gap: 2px;
+      width: 100%;
+      min-height: 0;
+      border: 1px solid rgba(18, 184, 204, .18);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      color: var(--text);
+      text-align: left;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .search-result:hover {
+      border-color: var(--logo-orange);
+      background: #f7faf9;
+      transform: none;
+    }
+
+    .search-result strong {
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .search-result span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .search-empty {
+      margin-top: 8px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .rubro {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      min-height: 32px;
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+
+    .rubro:hover {
+      background: rgba(6, 164, 145, .06);
+    }
+
+    .rubro input { margin: 0; }
+
+    .swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      display: inline-block;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+    }
+
+    .count { color: var(--muted); font-size: 12px; }
+    .map-stage {
+      position: relative;
+      min-height: 100%;
+    }
+
+    #map { min-height: 100%; height: 100%; }
+
+    .map-brand {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 470;
+      width: clamp(160px, 15vw, 230px);
+      pointer-events: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 8px 22px rgba(44, 52, 116, .12);
+    }
+
+    .map-brand img {
+      display: block;
+      width: 100%;
+      height: auto;
+      opacity: .94;
+    }
+
+    .map-nav-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .map-dashboard-button,
+    .map-home-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border: 1px solid rgba(18, 184, 204, .24);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(18,184,204,.10), rgba(140,207,89,.10), rgba(255,212,55,.12)),
+        #ffffff;
+      color: var(--accent-strong);
+      font-size: 20px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 1px 0 rgba(255,255,255,.9) inset;
+    }
+
+    .map-dashboard-button {
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .map-home-button {
+      width: 38px;
+      min-width: 38px;
+      font-size: 20px;
+    }
+
+    .map-dashboard-button:hover,
+    .map-home-button:hover {
+      border-color: var(--logo-orange);
+      box-shadow: 0 6px 14px rgba(23, 33, 43, .08);
+    }
+
+    .municipal-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 10px 8px;
+      border-top: 1px solid rgba(215, 222, 230, .9);
+      color: var(--muted);
+    }
+
+    .municipal-footer.top {
+      position: sticky;
+      top: -18px;
+      z-index: 20;
+      margin: -18px -18px 14px;
+      padding: 18px 18px 12px;
+      border-top: 0;
+      border-bottom: 1px solid rgba(215, 222, 230, .9);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,252,248,.96)),
+        radial-gradient(circle at 8% 6%, rgba(255, 212, 55, .28), transparent 28%),
+        radial-gradient(circle at 92% 0%, rgba(239, 74, 60, .18), transparent 24%),
+        radial-gradient(circle at 12% 92%, rgba(18, 184, 204, .18), transparent 30%);
+      box-shadow: 0 8px 18px rgba(23, 33, 43, .08);
+    }
+
+    .municipal-footer img {
+      width: 36px;
+      max-height: 48px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+
+    .municipal-footer strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .municipal-footer span {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .marker {
+      position: relative;
+      display: block;
+      width: 19px;
+      height: 19px;
+      border-radius: 999px;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+
+    .marker.water {
+      width: 20px;
+      height: 20px;
+      border-radius: 70% 70% 70% 0;
+      background: linear-gradient(135deg, var(--blue), var(--brand-violet));
+      transform: rotate(-45deg);
+      box-shadow: 0 3px 10px rgba(14, 116, 144, .38);
+    }
+
+    .marker.water::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+    }
+
+    .popup h2 {
+      font-size: 16px;
+      line-height: 1.2;
+      margin: 0 0 8px;
+      letter-spacing: 0;
+    }
+
+    .popup dl {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 5px 8px;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .popup dt { color: var(--muted); }
+    .popup dd { margin: 0; }
+
+    .block-tooltip {
+      border: 0;
+      border-radius: 6px;
+      padding: 4px 7px;
+      background: rgba(23, 33, 43, .86);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(23, 33, 43, .18);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .block-tooltip::before {
+      display: none;
+    }
+
+    .notice {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .outages {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-top: 0;
+      margin: 0;
+      padding-top: 0;
+    }
+
+    .outages h2 {
+      font-size: 13px;
+      margin: 0 0 8px;
+      letter-spacing: 0;
+      display: none;
+    }
+
+    .outages > .notice,
+    .panel-body > .notice,
+    .panel-body > .municipal-footer,
+    aside > .panel-body > .notice,
+    aside > .panel-body > footer {
+      display: none;
+    }
+
+    .primary {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--logo-cyan), var(--logo-green), var(--logo-yellow), var(--logo-orange));
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .soft-danger {
+      border-color: rgba(239, 74, 60, .34);
+      background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(255, 212, 55, .22), rgba(239, 74, 60, .16));
+      color: #9f2f26;
+      font-weight: 700;
+    }
+
+    .zone-list,
+    .event-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .zone-row,
+    .event-row {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+      box-shadow: 0 1px 0 rgba(255,255,255,.85) inset;
+    }
+
+    .zone-row strong,
+    .event-row strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .event-row.active {
+      border-color: #d62828;
+      background: #fff7f7;
+    }
+
+    .event-row.high {
+      border-left: 4px solid #d62828;
+    }
+
+    .event-row.medium {
+      border-left: 4px solid #f77f00;
+    }
+
+    .event-row.low {
+      border-left: 4px solid #2a9d8f;
+    }
+
+    .event-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .event-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border: 1px solid rgba(15, 118, 110, .24);
+      border-radius: 8px;
+      padding: 0 8px;
+      background: #f7faf9;
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .heat-legend {
+      margin: 10px 0 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .heat-scale {
+      height: 10px;
+      border-radius: 999px;
+      margin: 6px 0 4px;
+      background: linear-gradient(90deg, #2a9d8f, #f4d35e, #f77f00, #d62828);
+      border: 1px solid var(--line);
+    }
+
+    .heat-labels {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .chart {
+      display: grid;
+      gap: 6px;
+      margin: 8px 0 12px;
+    }
+
+    .hidden-chart {
+      display: none;
+    }
+
+    .population-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+
+    .population-summary div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .population-summary strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.15;
+      color: var(--accent-strong);
+    }
+
+    .population-summary span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .population-note {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .population-details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.78);
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .population-details summary {
+      cursor: pointer;
+      padding: 8px 10px;
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 900;
+      list-style-position: inside;
+    }
+
+    .population-details .chart {
+      max-height: 220px;
+      overflow: auto;
+      margin: 0;
+      padding: 0 8px 8px;
+    }
+
+    .empty-row {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      padding: 8px 0;
+    }
+
+    .simulation {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      margin: 12px 0;
+      box-shadow: var(--soft-shadow);
+    }
+
+    .simulation-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .simulation-head strong {
+      font-size: 13px;
+    }
+
+    .simulation-head span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .timeline {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .simulation-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .simulation-actions.three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .map-view {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin: 8px 0 12px;
+    }
+
+    .map-view button {
+      min-height: 32px;
+      padding: 0 6px;
+      font-size: 12px;
+    }
+
+    .map-view button.active {
+      border-color: rgba(255, 140, 40, .45);
+      background: linear-gradient(135deg, rgba(18, 184, 204, .14), rgba(140, 207, 89, .16), rgba(255, 212, 55, .18));
+      color: #126b68;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 78px 1fr minmax(86px, auto);
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e7ebf0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: 999px;
+    }
+
+    @media (max-width: 780px) {
+      body {
+        overflow: hidden;
+      }
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        width: 100%;
+        max-width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+      }
+      aside {
+        width: 100%;
+        max-width: 100vw;
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 6px;
+        padding: 8px 10px;
+        overflow: hidden;
+      }
+      .map-topbar-main {
+        display: flex;
+      }
+      .map-topbar-main .municipal-footer.top img {
+        width: 164px;
+        max-width: 48vw;
+      }
+      .map-topbar-main .municipal-footer.top strong {
+        font-size: 12px;
+      }
+      .map-topbar-main .municipal-footer.top span {
+        display: none;
+      }
+      .panel-scroll-hint {
+        width: 100%;
+        min-width: 0;
+      }
+      .panel-body {
+        width: 100%;
+        max-width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+        align-items: start;
+        gap: 6px;
+        overflow: visible;
+        padding-bottom: 0;
+      }
+      .panel-section,
+      .outages,
+      .map-nav-actions {
+        flex: initial;
+      }
+      .outages {
+        display: contents;
+      }
+      .map-nav-actions {
+        order: 10;
+        width: 100%;
+        min-width: 0;
+        justify-self: end;
+        grid-column: 2;
+        margin-left: 0;
+      }
+      .map-dashboard-button,
+      .map-home-button {
+        min-height: 36px;
+        box-shadow: 0 6px 14px rgba(23, 33, 43, .08);
+      }
+      .map-dashboard-button {
+        flex: 1 1 auto;
+        padding: 0 8px;
+        font-size: 11px;
+      }
+      .map-home-button {
+        flex: 0 0 36px;
+        width: 36px;
+        min-width: 36px;
+      }
+      .panel-section summary {
+        min-height: 38px;
+        padding: 0 8px 0 10px;
+        font-size: 11px;
+        line-height: 1.15;
+        white-space: normal;
+        text-align: left;
+      }
+      .panel-section summary::after {
+        width: 17px;
+        height: 17px;
+        font-size: 9px;
+      }
+      .panel-scroll-hint .notice,
+      .panel-scroll-hint .municipal-footer,
+      .panel-scroll-hint > .notice,
+      .panel-scroll-hint > .municipal-footer {
+        display: none;
+      }
+      .panel-section-body,
+      .panel-section.align-right .panel-section-body {
+        position: fixed;
+        top: 148px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-height: calc(100dvh - 164px);
+        transform: none !important;
+      }
+      .current-ops {
+        flex-wrap: wrap;
+      }
+      #map {
+        width: 100vw;
+        height: 100%;
+        min-height: 0;
+      }
+      .map-stage {
+        min-height: 0;
+      }
+      .map-brand {
+        left: 12px;
+        bottom: 12px;
+        width: 82px;
+      }
+      .panel-scroll-hint > .municipal-footer {
+        display: none;
+      }
+      .panel-body .panel-section:nth-of-type(1),
+      .panel-body .panel-section:nth-of-type(2) {
+        grid-column: span 1;
+      }
+      .panel-body .panel-section:nth-of-type(3),
+      .panel-body .panel-section:nth-of-type(4) {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside>
+      <div class="map-topbar-main">
+        <footer class="municipal-footer top">
+          <img src="assets/logo-ciudad.png" alt="">
+          <div>
+            <span>Mapa operativo</span>
+          </div>
+        </footer>
+      </div>
+
+      <div class="panel-scroll-hint">
+      <div class="panel-body">
+      <details class="panel-section">
+        <summary>Operación</summary>
+        <div class="panel-section-body">
+          <section class="current-ops">
+            <h2>Ahora</h2>
+            <div class="ops-grid">
+              <div class="ops-metric"><strong id="activeEventCount">0</strong><span>cortes activos</span></div>
+              <div class="ops-metric"><strong id="criticalEventCount">0</strong><span>prioridad alta</span></div>
+            </div>
+            <div class="ops-actions">
+              <button id="focusActiveEvents" class="primary" type="button">Ver activos</button>
+              <button id="refreshBackendEvents" type="button">Actualizar</button>
+            </div>
+            <span id="backendSyncLabel" class="ops-sync">Sin sincronizar</span>
+          </section>
+          <p class="notice" id="simNotice">
+            Esperando fotos desde WhatsApp o datos historicos.
+          </p>
+          <div class="toolbar">
+            <button id="clearEvents" class="soft-danger" type="button">Limpiar eventos</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel-section">
+        <summary>Rubro</summary>
+        <div class="panel-section-body">
+          <section class="stats">
+            <div class="stat"><strong id="visibleCount">0</strong><span>visibles</span></div>
+            <div class="stat"><strong id="totalCount">0</strong><span>cargadas</span></div>
+          </section>
+          <label for="search">Buscar</label>
+          <input id="search" type="search" placeholder="Nombre, dirección, institución...">
+          <div id="searchResults" class="search-results" aria-live="polite"></div>
+
+          <div class="toolbar">
+            <button id="selectAll" type="button">Todos</button>
+            <button id="clearAll" type="button">Ninguno</button>
+          </div>
+
+          <div id="rubros" class="rubros"></div>
+        </div>
+      </details>
+      <p class="notice" id="notice"></p>
+
+      <section class="outages">
+        <details class="panel-section align-right">
+          <summary>Capas</summary>
+          <div class="panel-section-body">
+            <div class="heat-legend">
+              <span id="mapLegendTitle">Afectación por cortes</span>
+              <div class="heat-scale" id="mapLegendScale"></div>
+              <div class="heat-labels" id="mapLegendLabels"><span>0%</span><span>25%</span><span>50%+</span></div>
+            </div>
+            <label>Vista del mapa</label>
+            <div class="map-view">
+              <button id="viewHeat" class="active" type="button">Calor</button>
+              <button id="viewBarrio" type="button">Barrios</button>
+              <button id="viewDensity" type="button">Población</button>
+              <button id="viewBlocks" type="button">Bloques</button>
+            </div>
+            <div id="impactChart" class="chart hidden-chart"></div>
+            <label>Población estimada 2022</label>
+            <div class="population-summary">
+              <div><strong id="populationTotal">0</strong><span>habitantes afectados</span></div>
+              <div><strong id="householdsTotal">0</strong><span>hogares afectados</span></div>
+            </div>
+            <p class="population-note" id="populationNote">Sin cortes activos con impacto poblacional calculado.</p>
+            <details class="population-details" open>
+              <summary>Barrios afectados</summary>
+              <div id="affectedBarriosChart" class="chart"></div>
+            </details>
+            <details class="population-details">
+              <summary>Barrios en general</summary>
+              <div id="populationChart" class="chart"></div>
+            </details>
+          </div>
+        </details>
+
+        <details class="panel-section align-right">
+          <summary>Simulación</summary>
+          <div class="panel-section-body">
+            <div class="simulation">
+              <div class="simulation-head">
+                <strong>Simulación mensual</strong>
+                <span id="timelineLabel">Sin video activo</span>
+              </div>
+              <input id="timelineRange" class="timeline" type="range" min="0" max="0" value="0" disabled>
+              <div class="simulation-actions">
+                <button id="simulateMonth" type="button">1 mes</button>
+                <button id="simulateTwoMonths" type="button">2 meses</button>
+              </div>
+              <div class="simulation-actions three">
+                <button id="playTimeline" class="primary" type="button" disabled>Reproducir</button>
+                <button id="pauseTimeline" type="button" disabled>Pausar</button>
+                <button id="resetTimeline" type="button" disabled>Reiniciar</button>
+              </div>
+              <div class="simulation-actions">
+                <button id="loadHistoryTimeline" type="button">Historico real</button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel-section align-right">
+          <summary>Barrios y zonas</summary>
+          <div class="panel-section-body">
+            <div id="zoneList" class="zone-list"></div>
+          </div>
+        </details>
+
+        <details class="panel-section align-right">
+          <summary>Eventos</summary>
+          <div class="panel-section-body">
+            <div id="eventList" class="event-list"></div>
+          </div>
+        </details>
+        <div class="map-nav-actions">
+          <a class="map-dashboard-button" href="/dashboard-cortes">Dashboard</a>
+          <a class="map-home-button" href="/" title="Volver al inicio" aria-label="Volver al inicio">&#8962;</a>
+        </div>
+      </section>
+      <footer class="municipal-footer">
+        <img src="assets/logo-ciudad.png" alt="">
+      </footer>
+      </div>
+      </div>
+    </aside>
+    <section class="map-stage" aria-label="Mapa operativo de instituciones y cortes">
+      <div id="map"></div>
+      <div class="map-brand">
+        <img src="assets/logoblanco-transparente.png" alt="Empresa">
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script>
+    const palette = [
+      "#d62828", "#0077b6", "#2a9d8f", "#f77f00", "#6a4c93", "#5a7d3a",
+      "#bc5090", "#003f5c", "#8f2d56", "#2f4b7c", "#ef476f", "#118ab2",
+      "#7f4f24", "#4d908e", "#9b2226", "#577590", "#b56576", "#386641"
+    ];
+
+    const map = L.map("map", { zoomControl: true }).setView([-34.1634, -58.9592], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+    const clusterLayer = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 44
+    });
+    map.addLayer(clusterLayer);
+
+    const state = {
+      records: [],
+      markers: [],
+      colors: new Map(),
+      activeRubros: new Set(),
+      search: "",
+      zoneLayers: new Map(),
+      blockLayer: null,
+      blockGroups: new Map(),
+      population: {
+        meta: null,
+        groups: new Map(),
+        barrios: new Map()
+      },
+      activeHighlightLayer: null,
+      zoneStats: new Map(),
+      heatLayer: null,
+      mapView: "heat",
+      lastWhatsappMessageId: localStorage.getItem("lastProcessedWhatsappDemoMessageId") || "",
+      events: [],
+      timelineEvents: [],
+      timelineDay: 0,
+      timelineDays: 0,
+      timelineTimer: null,
+      lastBackendSync: "",
+      lastBackendSignature: "",
+      backendRefreshInFlight: false,
+      hardRefreshScheduled: false
+    };
+
+    let simulatedZones = [];
+
+    const criticalRubros = new Set(["SALUD", "ASISTENCIA", "BOMBEROS", "POZOS DE AGUA"]);
+    const groupZoneMap = {};
+    const demoWindowMinutes = 24 * 60;
+    const priorityLabels = {
+      high: "Prioridad 1",
+      medium: "Prioridad 2",
+      low: "Prioridad 3"
+    };
+
+    const visibleCount = document.querySelector("#visibleCount");
+    const totalCount = document.querySelector("#totalCount");
+    const rubrosPanel = document.querySelector("#rubros");
+    const searchResults = document.querySelector("#searchResults");
+    const notice = document.querySelector("#notice");
+    const simNotice = document.querySelector("#simNotice");
+    const zoneList = document.querySelector("#zoneList");
+    const eventList = document.querySelector("#eventList");
+    const impactChart = document.querySelector("#impactChart");
+    const populationChart = document.querySelector("#populationChart");
+    const affectedBarriosChart = document.querySelector("#affectedBarriosChart");
+    const populationTotal = document.querySelector("#populationTotal");
+    const householdsTotal = document.querySelector("#householdsTotal");
+    const populationNote = document.querySelector("#populationNote");
+    const timelineRange = document.querySelector("#timelineRange");
+    const timelineLabel = document.querySelector("#timelineLabel");
+    const playTimeline = document.querySelector("#playTimeline");
+    const pauseTimeline = document.querySelector("#pauseTimeline");
+    const resetTimeline = document.querySelector("#resetTimeline");
+    const loadHistoryTimeline = document.querySelector("#loadHistoryTimeline");
+    const activeEventCount = document.querySelector("#activeEventCount");
+    const criticalEventCount = document.querySelector("#criticalEventCount");
+    const backendSyncLabel = document.querySelector("#backendSyncLabel");
+    const focusActiveEvents = document.querySelector("#focusActiveEvents");
+    const refreshBackendEvents = document.querySelector("#refreshBackendEvents");
+    const mapLegendTitle = document.querySelector("#mapLegendTitle");
+    const mapLegendScale = document.querySelector("#mapLegendScale");
+    const mapLegendLabels = document.querySelector("#mapLegendLabels");
+    const viewButtons = {
+      heat: document.querySelector("#viewHeat"),
+      barrio: document.querySelector("#viewBarrio"),
+      density: document.querySelector("#viewDensity"),
+      blocks: document.querySelector("#viewBlocks")
+    };
+
+    document.addEventListener("click", event => {
+      const target = event.target.closest("button, .button, .map-dashboard-button, .map-home-button");
+      if (target && typeof target.blur === "function") {
+        window.setTimeout(() => target.blur(), 0);
+      }
+    });
+
+    function colorFor(rubro) {
+      if (rubro === "POZOS DE AGUA") return "#0ea5e9";
+      if (!state.colors.has(rubro)) {
+        state.colors.set(rubro, palette[state.colors.size % palette.length]);
+      }
+      return state.colors.get(rubro);
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function formatNumber(value) {
+      const number = Number(value || 0);
+      return number.toLocaleString("es-AR");
+    }
+
+    function formatDensity(value) {
+      const number = Number(value || 0);
+      if (!number) return "-";
+      return `${Math.round(number).toLocaleString("es-AR")} hab/km²`;
+    }
+
+    function populationQualityLabel(item, mode = "barrio") {
+      if (!item) return "";
+      const radios = Number(item.radio_count || 0);
+      const area = Number(item.area_km2 || 0);
+      if (item.source === "barrios_asociados") return "Estimado por barrios asociados";
+      if (mode === "grupo") return "Bloque operativo aproximado";
+      if (radios <= 1) return "Cruce puntual";
+      if (area >= 5) return "Zona extensa / baja densidad";
+      return "Cruce operativo";
+    }
+
+    function populationKey(value) {
+      return normalize(value)
+        .replace(/^\d+\s*-\s*/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function setPopulationData(data) {
+      state.population.meta = data?.meta || null;
+      state.population.groups.clear();
+      state.population.barrios.clear();
+      (data?.groups || []).forEach(item => {
+        const key = String(item.id || "").toUpperCase();
+        if (key) state.population.groups.set(key, item);
+      });
+      (data?.barrios || []).forEach(item => {
+        [item.id, item.label].filter(Boolean).forEach(key => {
+          state.population.barrios.set(String(key), item);
+        });
+        const looseKey = populationKey(item.label);
+        if (looseKey && !state.population.barrios.has(looseKey)) {
+          state.population.barrios.set(looseKey, item);
+        }
+      });
+
+      if (!state.population.meta) {
+        populationTotal.textContent = "0";
+        householdsTotal.textContent = "0";
+        populationNote.textContent = "No se pudo cargar la estimación de población.";
+        return;
+      }
+
+      populationTotal.textContent = "0";
+      householdsTotal.textContent = "0";
+      populationNote.textContent = "Sin cortes activos con impacto poblacional calculado.";
+    }
+
+    function populationForGroup(group) {
+      const key = String(group || "").toUpperCase().replace("GRUPO", "").trim();
+      const direct = state.population.groups.get(key);
+      if (direct) return direct;
+
+      const zoneIds = groupZoneMap[key] || [];
+      const seen = new Set();
+      const total = {
+        kind: "grupo_wsp",
+        id: key,
+        label: `Grupo ${key}`,
+        group: key,
+        population: 0,
+        households: 0,
+        radio_count: 0,
+        area_km2: 0,
+        source: "barrios_asociados"
+      };
+      zoneIds.forEach(zoneId => {
+        const zone = simulatedZones.find(item => item.id === zoneId);
+        const population = populationForZone(zone);
+        const dedupeKey = population?.id || zone?.sourceZoneId || zone?.id;
+        if (!population || !dedupeKey || seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        total.population += Number(population.population || 0);
+        total.households += Number(population.households || 0);
+        total.radio_count += Number(population.radio_count || 0);
+        total.area_km2 += Number(population.area_km2 || 0);
+      });
+      if (!total.population) return null;
+      total.area_km2 = Number(total.area_km2.toFixed(6));
+      total.density_hab_km2 = total.area_km2 ? total.population / total.area_km2 : null;
+      return total;
+    }
+
+    function populationForZone(zone) {
+      if (!zone) return null;
+      return state.population.barrios.get(String(zone.sourceZoneId || ""))
+        || state.population.barrios.get(String(zone.sourceLabel || ""))
+        || state.population.barrios.get(String(zone.id))
+        || state.population.barrios.get(zone.label)
+        || state.population.barrios.get(populationKey(zone.sourceLabel || ""))
+        || state.population.barrios.get(populationKey(zone.label))
+        || null;
+    }
+
+    function populationDl(item, mode = "barrio") {
+      if (!item) {
+        return mode === "grupo"
+          ? "<dt>Población</dt><dd>Sin estimación INDEC para este bloque</dd>"
+          : "";
+      }
+      return `
+        <dt>Población</dt><dd>${formatNumber(item.population)} personas estimadas</dd>
+        <dt>Hogares</dt><dd>${formatNumber(item.households)}</dd>
+        <dt>Densidad</dt><dd>${formatDensity(item.density_hab_km2)}</dd>
+        <dt>Lectura</dt><dd>${populationQualityLabel(item, mode)}</dd>
+      `;
+    }
+
+    function populationForEvent(event) {
+      const byGroup = populationForGroup(event?.group || "");
+      if (byGroup) return byGroup;
+      const zoneIds = event?.zoneIds?.length ? event.zoneIds : [event?.zoneId];
+      const seen = new Set();
+      const total = { population: 0, households: 0, radio_count: 0 };
+      zoneIds.forEach(zoneId => {
+        if (!zoneId || seen.has(zoneId)) return;
+        seen.add(zoneId);
+        const zone = simulatedZones.find(item => item.id === zoneId);
+        const population = populationForZone(zone);
+        if (!population) return;
+        total.population += Number(population.population || 0);
+        total.households += Number(population.households || 0);
+        total.radio_count += Number(population.radio_count || 0);
+      });
+      return total.population ? total : null;
+    }
+
+    function markerIcon(color, rubro = "") {
+      if (rubro === "POZOS DE AGUA") {
+        return L.divIcon({
+          className: "",
+          html: `<div class="marker water"></div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 16],
+          popupAnchor: [0, -14]
+        });
+      }
+      return L.divIcon({
+        className: "",
+        html: `<div class="marker" style="background:${color}"></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -10]
+      });
+    }
+
+    function popupFor(item) {
+      const obs = item.observaciones || "Sin observaciones cargadas";
+      return `
+        <div class="popup">
+          <h2>${escapeHtml(item.nombre)}</h2>
+          <dl>
+            <dt>Rubro</dt><dd>${escapeHtml(item.rubro)}</dd>
+            <dt>Dirección</dt><dd>${escapeHtml(item.direccion)}</dd>
+            <dt>Ciudad</dt><dd>${escapeHtml(item.ciudad)}</dd>
+            <dt>Telefono</dt><dd>${escapeHtml(item.telefono || "-")}</dd>
+            <dt>Obs.</dt><dd>${escapeHtml(obs)}</dd>
+          </dl>
+        </div>`;
+    }
+
+    function normalize(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function matchesSearch(item) {
+      if (!state.search) return true;
+      const haystack = normalize(`${item.nombre} ${item.rubro} ${item.direccion} ${item.ciudad} ${item.telefono} ${item.observaciones}`);
+      return haystack.includes(state.search);
+    }
+
+    function searchScore(item) {
+      if (!state.search) return 0;
+      const name = normalize(item.nombre);
+      const address = normalize(item.direccion);
+      const rubro = normalize(item.rubro);
+      if (name === state.search) return 0;
+      if (name.startsWith(state.search)) return 1;
+      if (name.includes(state.search)) return 2;
+      if (address.includes(state.search)) return 3;
+      if (rubro.includes(state.search)) return 4;
+      return 5;
+    }
+
+    function markerEntryFor(item) {
+      return state.markers.find(entry => entry.item === item);
+    }
+
+    function focusRecord(item) {
+      const entry = markerEntryFor(item);
+      if (!entry) return;
+      clusterLayer.addLayer(entry.marker);
+      map.setView(entry.marker.getLatLng(), Math.max(map.getZoom(), 16), { animate: true });
+      if (clusterLayer.zoomToShowLayer) {
+        clusterLayer.zoomToShowLayer(entry.marker, () => entry.marker.openPopup());
+      } else {
+        window.setTimeout(() => entry.marker.openPopup(), 180);
+      }
+    }
+
+    function renderSearchResults(matches) {
+      searchResults.innerHTML = "";
+      if (!state.search) return;
+      if (!matches.length) {
+        searchResults.innerHTML = `<div class="search-empty">Sin coincidencias</div>`;
+        return;
+      }
+
+      matches
+        .slice()
+        .sort((a, b) => searchScore(a) - searchScore(b) || a.nombre.localeCompare(b.nombre))
+        .slice(0, 12)
+        .forEach(item => {
+          const row = document.createElement("button");
+          row.className = "search-result";
+          row.type = "button";
+          row.innerHTML = `
+            <strong>${escapeHtml(item.nombre)}</strong>
+            <span>${escapeHtml(item.rubro)} · ${escapeHtml(item.direccion || item.ciudad)}</span>
+          `;
+          row.addEventListener("click", () => focusRecord(item));
+          searchResults.appendChild(row);
+        });
+    }
+
+    function isCiudadItem(item) {
+      return normalize(item.ciudad).includes("ciudad");
+    }
+
+    function slugify(value) {
+      return normalize(value)
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "zona";
+    }
+
+    function aliasParts(label) {
+      const normalized = normalize(label);
+      const withoutNumber = normalized.replace(/^\d+\s*-\s*/, "").trim();
+      const parts = [label, normalized, withoutNumber];
+      if (label.includes("-")) parts.push(label.split("-").slice(1).join("-").trim());
+      return [...new Set(parts.filter(Boolean))];
+    }
+
+    function geoJsonPolygonToLatLngs(coordinates) {
+      return coordinates.map(ring => ring.map(point => [point[1], point[0]]));
+    }
+
+    function latLngsInCiudad(latLngs) {
+      const points = collectLatLngPoints(latLngs);
+      return points.some(point =>
+        point[0] >= -34.40 && point[0] <= -33.95 &&
+        point[1] >= -59.20 && point[1] <= -58.65
+      );
+    }
+
+    function geoJsonGeometryToLatLngs(geometry) {
+      if (!geometry) return [];
+      if (geometry.type === "Polygon") return geoJsonPolygonToLatLngs(geometry.coordinates);
+      if (geometry.type === "MultiPolygon") return geometry.coordinates.map(geoJsonPolygonToLatLngs).filter(latLngsInCiudad);
+      return [];
+    }
+
+    function officialZonesFromGeoJson(collection) {
+      return (collection?.features || []).map((feature, index) => {
+        const label = feature.properties?.label || feature.properties?.Name || feature.properties?.nombre || `Barrio ${index + 1}`;
+        return {
+          id: feature.properties?.id || `barrio-${feature.properties?.fid || index + 1}`,
+          label,
+          sourceZoneId: feature.properties?.sourceZoneId || "",
+          sourceLabel: feature.properties?.sourceLabel || "",
+          number: feature.properties?.number || feature.properties?.pdfNumber || "",
+          name: feature.properties?.name || feature.properties?.pdfName || "",
+          kind: feature.properties?.kind || "barrio_loteo",
+          aliases: aliasParts(label),
+          color: palette[index % palette.length],
+          latLngs: geoJsonGeometryToLatLngs(feature.geometry)
+        };
+      }).filter(zone => zone.latLngs.length && latLngsInCiudad(zone.latLngs));
+    }
+
+    function applyGroupMappings(groupsData) {
+      Object.keys(groupZoneMap).forEach(key => delete groupZoneMap[key]);
+      (groupsData?.groups || []).forEach(group => {
+        const ids = (group.barrios || []).map(barrio => barrio.id).filter(Boolean);
+        if (ids.length) groupZoneMap[String(group.group).toUpperCase()] = ids;
+      });
+      groupZoneMap["A/B"] = [
+        "zona-p1-1-12-de-octubre",
+        "zona-p1-20-centro",
+        "zona-p2-3-centro"
+      ];
+      groupZoneMap["A"] = groupZoneMap["A"] || groupZoneMap["A/B"];
+      groupZoneMap["B"] = groupZoneMap["B"] || groupZoneMap["A/B"];
+    }
+
+    function pointInPolygon(lat, lon, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const yi = polygon[i][0], xi = polygon[i][1];
+        const yj = polygon[j][0], xj = polygon[j][1];
+        const intersects = ((xi > lon) !== (xj > lon))
+          && (lat < (yj - yi) * (lon - xi) / (xj - xi) + yi);
+        if (intersects) inside = !inside;
+      }
+      return inside;
+    }
+
+    function pointInLatLngRings(lat, lon, rings) {
+      if (!rings.length || !pointInPolygon(lat, lon, rings[0])) return false;
+      return !rings.slice(1).some(hole => pointInPolygon(lat, lon, hole));
+    }
+
+    function pointInZone(lat, lon, zone) {
+      const polygons = zone.latLngs || [];
+      const normalizedPolygons = typeof polygons[0]?.[0]?.[0] === "number" ? [polygons] : polygons;
+      return normalizedPolygons.some(rings => pointInLatLngRings(lat, lon, rings));
+    }
+
+    function recordsInZone(zone) {
+      return state.records.filter(item => pointInZone(Number(item.lat), Number(item.lon), zone));
+    }
+
+    function priorityFor(zone, type) {
+      const stats = state.zoneStats.get(zone.id) || { critical: 0, total: 0 };
+      if (stats.critical > 0) return "high";
+      if (type === "inesperado" || stats.total >= 12) return "medium";
+      return "low";
+    }
+
+    function priorityLabel(priority) {
+      return priorityLabels[priority] || "Prioridad 3";
+    }
+
+    function priorityReason(priority, criticalCount, type) {
+      if (priority === "high") return `Instituciones críticas afectadas: ${criticalCount}`;
+      if (priority === "medium" && type === "inesperado") return "Corte inesperado";
+      if (priority === "medium") return "Barrio/zona con alta cantidad de instituciones";
+      return "Sin instituciones críticas detectadas";
+    }
+
+    function parseClock(value) {
+      if (!value || value === "sin hora") return null;
+      const match = String(value).match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return null;
+      return Math.min(Number(match[1]), 23) * 60 + Math.min(Number(match[2]), 59);
+    }
+
+    function durationMinutes(start, end) {
+      const startMinutes = parseClock(start);
+      const endMinutes = parseClock(end);
+      if (startMinutes === null || endMinutes === null) return 0;
+      let minutes = endMinutes - startMinutes;
+      if (minutes < 0) minutes += 24 * 60;
+      return minutes;
+    }
+
+    function heatColor(percent, active, hasCritical = false) {
+      if (active) return "#d62828";
+      if (hasCritical && percent >= 25) return "#d62828";
+      if (percent >= 50) return hasCritical ? "#d62828" : "#f77f00";
+      if (percent >= 25) return "#f77f00";
+      if (percent >= 10) return hasCritical ? "#f4d35e" : "#b7d96b";
+      return "#2a9d8f";
+    }
+
+    function populationColor(value) {
+      const population = Number(value || 0);
+      if (!population) return "#d7dee6";
+      if (population >= 4000) return "#d62828";
+      if (population >= 2000) return "#f77f00";
+      if (population >= 1000) return "#f4d35e";
+      if (population >= 500) return "#b8d96b";
+      return "#d7e8a5";
+    }
+
+    function styleZoneLayer(zone, layer, impactStats) {
+      if (!layer) return;
+      if (state.mapView === "density") {
+        const population = populationForZone(zone);
+        const color = populationColor(population?.population);
+        layer.setStyle({
+          color,
+          fillColor: color,
+          fillOpacity: population ? 0.34 : 0.1,
+          weight: population ? 3 : 1,
+          opacity: population ? 0.9 : 0.45
+        });
+        return;
+      }
+
+      const impact = impactStats.get(zone.id) || { active: false, percent: 0 };
+      const zoneStats = state.zoneStats.get(zone.id) || { critical: 0 };
+      const color = heatColor(impact.percent, impact.active, zoneStats.critical > 0);
+      layer.setStyle({
+        color,
+        fillColor: color,
+        fillOpacity: impact.active ? 0.38 : 0.18,
+        weight: impact.active ? 4 : 2,
+        opacity: 0.9
+      });
+    }
+
+    function eventDurationForTimeline(event) {
+      if (!state.timelineEvents.length) return durationMinutes(event.start, event.end);
+      if (event.day > state.timelineDay) return 0;
+      if (event.day < state.timelineDay) return durationMinutes(event.start, event.end) || event.duration || 0;
+      const endMinute = Math.min(event.startMinute + event.duration, 24 * 60);
+      const visibleEnd = Math.min(endMinute, Math.max(event.startMinute, event.startMinute + 90));
+      return Math.max(0, visibleEnd - event.startMinute);
+    }
+
+    function monthlyImpactStats() {
+      const stats = new Map(simulatedZones.map(zone => [
+        zone.id,
+        { outages: 0, minutes: 0, active: false, percent: 0 }
+      ]));
+
+      const events = state.timelineEvents.length
+        ? state.timelineEvents.filter(event => event.day <= state.timelineDay)
+        : state.events;
+      const windowMinutes = state.timelineEvents.length
+        ? Math.max(1, state.timelineDays * 24 * 60)
+        : demoWindowMinutes;
+
+      events.forEach(event => {
+        const item = stats.get(event.zoneId);
+        if (!item) return;
+        item.outages += 1;
+        if ((!event.restored && !event.end) || (state.timelineEvents.length && event.day === state.timelineDay)) item.active = true;
+        item.minutes += eventDurationForTimeline(event);
+      });
+
+      stats.forEach(item => {
+        item.percent = item.active ? 100 : Math.min(100, Math.round((item.minutes / windowMinutes) * 100));
+      });
+      return stats;
+    }
+
+    function seededRandom(seed) {
+      let value = seed % 2147483647;
+      if (value <= 0) value += 2147483646;
+      return () => {
+        value = value * 16807 % 2147483647;
+        return (value - 1) / 2147483646;
+      };
+    }
+
+    function clockFromMinutes(minutes) {
+      const normalized = minutes % (24 * 60);
+      const hour = String(Math.floor(normalized / 60)).padStart(2, "0");
+      const minute = String(normalized % 60).padStart(2, "0");
+      return `${hour}:${minute}`;
+    }
+
+    function generateTimeline(days) {
+      const random = seededRandom(days * 7919 + simulatedZones.length);
+      const events = [];
+      for (let day = 1; day <= days; day += 1) {
+        const eventsToday = 1 + Math.floor(random() * 4);
+        for (let index = 0; index < eventsToday; index += 1) {
+          const zone = simulatedZones[Math.floor(random() * simulatedZones.length)];
+          const stats = state.zoneStats.get(zone.id) || { critical: 0, criticalNames: [] };
+          const type = random() > 0.34 ? "imprevisto" : "programado";
+          const startMinute = 6 * 60 + Math.floor(random() * 13 * 60);
+          const duration = 35 + Math.floor(random() * 210);
+          const endMinute = startMinute + duration;
+          const priority = priorityFor(zone, type);
+          events.push({
+            id: Number(`${days}${String(day).padStart(2, "0")}${String(index).padStart(2, "0")}`),
+            day,
+            startMinute,
+            duration,
+            message: `Simulación día ${day}: corte ${type} en ${zone.label}`,
+            source: "timeline",
+            group: "",
+            affectedArea: zone.label,
+            detail: type === "programado" ? "Mantenimiento preventivo simulado" : "Falla de red simulada",
+            estimatedRestore: `${Math.round(duration / 30) * 30} min`,
+            zoneId: zone.id,
+            zoneLabel: zone.label,
+            type,
+            start: clockFromMinutes(startMinute),
+            end: clockFromMinutes(endMinute),
+            priority,
+            priorityLabel: priorityLabel(priority),
+            priorityReason: priorityReason(priority, stats.critical, type),
+            criticalCount: stats.critical,
+            criticalInstitutions: stats.criticalNames || []
+          });
+        }
+      }
+      return events.sort((left, right) => left.day - right.day || left.startMinute - right.startMinute);
+    }
+
+    function parseCreatedAt(value) {
+      const match = String(value || "").match(/(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+      if (!match) return null;
+      return {
+        dateKey: `${match[1]}-${match[2]}-${match[3]}`,
+        minute: Number(match[4] || 0) * 60 + Number(match[5] || 0)
+      };
+    }
+
+    async function loadHistoricalTimeline() {
+      stopTimeline();
+      try {
+        const response = await fetch("api/cortes-historico", { cache: "no-store" });
+        if (!response.ok) throw new Error("history");
+        const data = await response.json();
+        const resolved = (Array.isArray(data.events) ? data.events : [])
+          .map(event => resolveEventZone(event))
+          .filter(Boolean)
+          .map(event => ({ ...event, createdInfo: parseCreatedAt(event.historyAt || event.createdAt) }))
+          .filter(event => event.createdInfo);
+
+        if (!resolved.length) {
+          state.timelineEvents = [];
+          state.timelineDay = 0;
+          state.timelineDays = 0;
+          simNotice.textContent = "Todavia no hay cortes historicos suficientes para reproducir.";
+          updateTimelineUi();
+          renderZoneStats();
+          renderEvents();
+          return;
+        }
+
+        const dates = [...new Set(resolved.map(event => event.createdInfo.dateKey))].sort();
+        const dayByDate = new Map(dates.map((date, index) => [date, index + 1]));
+        state.timelineDays = dates.length;
+        state.timelineDay = 0;
+        state.timelineEvents = resolved.map((event, index) => {
+          const day = dayByDate.get(event.createdInfo.dateKey);
+          const duration = event.restored ? 120 : 240;
+          return {
+            ...event,
+            id: event.id || `hist-${index}`,
+            day,
+            startMinute: event.createdInfo.minute,
+            duration,
+            start: event.start || clockFromMinutes(event.createdInfo.minute),
+            end: event.restored ? event.end || "restablecido" : "",
+            priority: event.priority || "low",
+            priorityLabel: event.priorityLabel || priorityLabel(event.priority || "low"),
+            priorityReason: event.priorityReason || ""
+          };
+        }).sort((left, right) => left.day - right.day || left.startMinute - right.startMinute);
+
+        const meta = data.meta || {};
+        const recordsLabel = meta.historyRecords
+          ? ` desde ${meta.historyRecords} registro(s) guardado(s)`
+          : "";
+        simNotice.textContent = `Historico real preparado: ${state.timelineEvents.length} corte(s) en ${state.timelineDays} dia(s)${recordsLabel}.`;
+        renderTimelineFrame(0);
+      } catch {
+        simNotice.textContent = "No pude cargar el historico real de cortes.";
+      }
+    }
+
+    function stopTimeline() {
+      if (state.timelineTimer) window.clearInterval(state.timelineTimer);
+      state.timelineTimer = null;
+    }
+
+    function updateTimelineUi() {
+      if (!state.timelineEvents.length) {
+        timelineLabel.textContent = "Sin video activo";
+        timelineRange.disabled = true;
+        playTimeline.disabled = true;
+        pauseTimeline.disabled = true;
+        resetTimeline.disabled = true;
+        return;
+      }
+      timelineRange.disabled = false;
+      timelineRange.max = state.timelineDays;
+      timelineRange.value = state.timelineDay;
+      playTimeline.disabled = state.timelineDay >= state.timelineDays;
+      pauseTimeline.disabled = !state.timelineTimer;
+      resetTimeline.disabled = false;
+      timelineLabel.textContent = `Día ${state.timelineDay} de ${state.timelineDays}`;
+    }
+
+    function renderTimelineFrame(day) {
+      state.timelineDay = Math.max(0, Math.min(day, state.timelineDays));
+      updateTimelineUi();
+      renderZoneStats();
+      renderEvents();
+    }
+
+    function startTimeline(days) {
+      stopTimeline();
+      state.timelineDays = days;
+      state.timelineDay = 0;
+      state.timelineEvents = generateTimeline(days);
+      simNotice.textContent = `Video de mapa de calor preparado: ${days} días, ${state.timelineEvents.length} cortes simulados.`;
+      renderTimelineFrame(0);
+    }
+
+    function playTimelineFrames() {
+      if (!state.timelineEvents.length || state.timelineDay >= state.timelineDays) return;
+      stopTimeline();
+      state.timelineTimer = window.setInterval(() => {
+        if (state.timelineDay >= state.timelineDays) {
+          stopTimeline();
+          updateTimelineUi();
+          return;
+        }
+        renderTimelineFrame(state.timelineDay + 1);
+      }, 420);
+      updateTimelineUi();
+    }
+
+    function resetTimelineFrames() {
+      stopTimeline();
+      renderTimelineFrame(0);
+      simNotice.textContent = `Video reiniciado: ${state.timelineDays} días simulados.`;
+    }
+
+    function collectLatLngPoints(value, points = []) {
+      if (!Array.isArray(value)) return points;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        points.push(value);
+        return points;
+      }
+      value.forEach(item => collectLatLngPoints(item, points));
+      return points;
+    }
+
+    function zoneCenter(zone) {
+      const points = collectLatLngPoints(zone.latLngs || []);
+      if (!points.length) return [-34.095, -59.025];
+      const totals = points.reduce((sum, point) => ({
+        lat: sum.lat + point[0],
+        lon: sum.lon + point[1]
+      }), { lat: 0, lon: 0 });
+      return [totals.lat / points.length, totals.lon / points.length];
+    }
+
+    function zoneHeatPoints(zone, impact) {
+      if (!impact || (!impact.percent && !impact.active && !impact.outages)) return [];
+      const records = recordsInZone(zone);
+      const center = zoneCenter(zone);
+      const baseIntensity = impact.active ? 1 : Math.min(1, Math.max(0.2, impact.percent / 55));
+      const outageBoost = Math.min(0.35, (impact.outages || 0) * 0.04);
+      const intensity = Math.min(1, baseIntensity + outageBoost);
+      const sourceRecords = records.length ? records : [{ lat: center[0], lon: center[1] }];
+      const points = sourceRecords.map(item => [
+        Number(item.lat),
+        Number(item.lon),
+        criticalRubros.has(item.rubro) ? Math.min(1, intensity + 0.22) : intensity
+      ]);
+
+      points.push([center[0], center[1], Math.min(1, intensity + 0.16)]);
+      return points;
+    }
+
+    function updateHeatLayer() {
+      if (!L.heatLayer) return;
+      const impactStats = monthlyImpactStats();
+      const points = simulatedZones.flatMap(zone => zoneHeatPoints(zone, impactStats.get(zone.id)));
+      if (!state.heatLayer) {
+        state.heatLayer = L.heatLayer([], {
+          radius: 34,
+          blur: 26,
+          maxZoom: 15,
+          minOpacity: 0.18,
+          gradient: {
+            0.08: "#2b83ba",
+            0.22: "#42b6c4",
+            0.38: "#7fe07a",
+            0.55: "#f4e04d",
+            0.74: "#f77f00",
+            1.0: "#d62828"
+          }
+        });
+      }
+      state.heatLayer.setLatLngs(points);
+      updateMapView();
+    }
+
+    function updateMapView() {
+      const showHeat = state.mapView === "heat";
+      const showBarrios = state.mapView === "barrio";
+      const showDensity = state.mapView === "density";
+      const showBlocks = state.mapView === "blocks";
+
+      if (state.heatLayer) {
+        if (showHeat && !map.hasLayer(state.heatLayer)) state.heatLayer.addTo(map);
+        if (!showHeat && map.hasLayer(state.heatLayer)) state.heatLayer.removeFrom(map);
+      }
+
+      state.zoneLayers.forEach(layer => {
+        if ((showBarrios || showDensity) && !map.hasLayer(layer)) layer.addTo(map);
+        if (!showBarrios && !showDensity && map.hasLayer(layer)) layer.removeFrom(map);
+      });
+
+      if (state.blockLayer) {
+        if (showBlocks && !map.hasLayer(state.blockLayer)) state.blockLayer.addTo(map);
+        if (!showBlocks && map.hasLayer(state.blockLayer)) state.blockLayer.removeFrom(map);
+      }
+
+      Object.entries(viewButtons).forEach(([mode, button]) => {
+        button.classList.toggle("active", mode === state.mapView);
+      });
+
+      if (state.mapView === "density") {
+        mapLegendTitle.textContent = "Población por zona";
+        mapLegendScale.style.background = "linear-gradient(90deg, #d7e8a5, #b8d96b, #f4d35e, #f77f00, #d62828)";
+        mapLegendLabels.innerHTML = "<span>&lt;500</span><span>2.000</span><span>4.000+</span>";
+      } else {
+        mapLegendTitle.textContent = "Afectación por cortes";
+        mapLegendScale.style.background = "linear-gradient(90deg, #2a9d8f, #f4d35e, #f77f00, #d62828)";
+        mapLegendLabels.innerHTML = "<span>0%</span><span>25%</span><span>50%+</span>";
+      }
+    }
+
+    function setMapView(mode) {
+      state.mapView = mode;
+      renderEvents();
+    }
+
+    function drawZones() {
+      state.zoneLayers.forEach(layer => {
+        if (map.hasLayer(layer)) layer.removeFrom(map);
+      });
+      state.zoneLayers.clear();
+
+      simulatedZones.forEach(zone => {
+        const layer = L.polygon(zone.latLngs, {
+          color: zone.color,
+          fillColor: zone.color,
+          fillOpacity: 0.08,
+          weight: 2
+        }).addTo(map);
+        const kindLabel = zone.kind === "renabap" ? "RENABAP" : "Barrio / loteo";
+        const population = populationForZone(zone);
+        layer.bindPopup(`
+          <div class="popup">
+            <h2>${escapeHtml(zone.label)}</h2>
+            <dl>
+              <dt>Tipo</dt><dd>${kindLabel}</dd>
+              ${populationDl(population, "barrio")}
+              <dt>Base</dt><dd>Municipal autorizada 2026</dd>
+            </dl>
+          </div>
+        `, { maxWidth: 320 });
+        state.zoneLayers.set(zone.id, layer);
+      });
+    }
+
+    function drawManualWhatsappBlocks(manualData, allowedGroups = null) {
+      return (manualData?.features || [])
+      .filter(feature => {
+        if (!allowedGroups) return true;
+        const group = String(feature.properties?.group || "").toUpperCase();
+        const method = String(feature.properties?.method || "");
+        if (group === "A" || group === "B") return false;
+        if (method === "street_bbox_approx") return false;
+        return allowedGroups.has(group);
+      })
+      .map((feature, index) => {
+        const props = feature.properties || {};
+        const color = props.color || palette[(palette.length - 1 - index + palette.length) % palette.length];
+        const layer = L.geoJSON(feature, {
+          style: {
+            color,
+            weight: 3,
+            opacity: 0.88,
+            fillColor: color,
+            fillOpacity: 0.14,
+            lineJoin: "round",
+            lineCap: "round"
+          }
+        });
+        layer.bindTooltip(escapeHtml(props.label || `Grupo ${props.group || ""}`), {
+          sticky: true,
+          direction: "top",
+          className: "block-tooltip"
+        });
+        const population = populationForGroup(props.group);
+        layer.bindPopup(`
+          <div class="popup">
+            <h2>${escapeHtml(props.label || `Grupo ${props.group || ""}`)}</h2>
+            <dl>
+              <dt>Tipo</dt><dd>Bloque operativo aproximado</dd>
+              <dt>Grupo</dt><dd>${escapeHtml(props.group || "-")}</dd>
+              ${populationDl(population, "grupo")}
+              <dt>Método</dt><dd>${escapeHtml(props.method || "manual")}</dd>
+              <dt>Nota</dt><dd>${escapeHtml(props.note || "-")}</dd>
+            </dl>
+          </div>
+        `, { maxWidth: 320 });
+        const groupKey = String(props.group || "").toUpperCase();
+        if (groupKey) {
+          state.blockGroups.set(groupKey, {
+            layer,
+            color,
+            baseWeight: 3,
+            baseOpacity: 0.88,
+            baseFillOpacity: 0.14
+          });
+        }
+        return layer;
+      });
+    }
+
+    function drawWhatsappBlocks(groupsData, manualData = null) {
+      if (state.blockLayer && map.hasLayer(state.blockLayer)) {
+        state.blockLayer.removeFrom(map);
+      }
+      state.blockGroups.clear();
+      const zonesById = new Map(simulatedZones.map(zone => [zone.id, zone]));
+      const layers = [];
+      const syntheticGroups = [
+        { group: "A/B", label: "Grupo A/B", barrios: groupZoneMap["A/B"].map(id => ({ id })) }
+      ];
+      [...syntheticGroups, ...(groupsData?.groups || [])].forEach((group, index) => {
+        const zoneIds = (group.barrios || []).map(barrio => barrio.id).filter(id => zonesById.has(id));
+        if (!zoneIds.length) return;
+
+        const color = palette[index % palette.length];
+        const groupLayers = zoneIds.map(zoneId => {
+          const zone = zonesById.get(zoneId);
+          return L.polygon(zone.latLngs, {
+            color,
+            weight: 1,
+            opacity: 0.42,
+            fillColor: color,
+            fillOpacity: 0.11,
+            lineJoin: "round",
+            lineCap: "round"
+          });
+        });
+        const groupLayer = L.featureGroup(groupLayers);
+        const records = zoneIds.flatMap(zoneId => recordsInZone(zonesById.get(zoneId)));
+        const criticalRecords = records.filter(item => criticalRubros.has(item.rubro));
+        const uniqueZoneLabels = zoneIds.map(zoneId => zonesById.get(zoneId)?.label).filter(Boolean);
+        const population = populationForGroup(group.group);
+        groupLayer.bindTooltip(escapeHtml(group.label || `Grupo ${group.group}`), {
+          sticky: true,
+          direction: "top",
+          className: "block-tooltip"
+        });
+        groupLayer.bindPopup(`
+            <div class="popup">
+              <h2>${escapeHtml(group.label || `Grupo ${group.group}`)}</h2>
+              <dl>
+                <dt>Zonas</dt><dd>${uniqueZoneLabels.length}</dd>
+                <dt>Instituciones</dt><dd>${records.length}</dd>
+                <dt>Críticas</dt><dd>${criticalRecords.length}</dd>
+                ${populationDl(population, "grupo")}
+                <dt>WhatsApp</dt><dd>${escapeHtml(group.whatsapp || "-")}</dd>
+              </dl>
+              <p>${escapeHtml(uniqueZoneLabels.slice(0, 14).join(", "))}${uniqueZoneLabels.length > 14 ? "..." : ""}</p>
+            </div>
+          `, { maxWidth: 340 });
+        groupLayer.on("mouseover", () => {
+          groupLayers.forEach(layer => layer.setStyle({ weight: 2, opacity: 0.78, fillOpacity: 0.2 }));
+          groupLayer.bringToFront();
+        });
+        groupLayer.on("mouseout", () => {
+          groupLayers.forEach(layer => layer.setStyle({ weight: 1, opacity: 0.42, fillOpacity: 0.11 }));
+        });
+        const groupKey = String(group.group || "").toUpperCase();
+        if (groupKey) {
+          const aliases = groupKey === "A/B" ? ["A/B", "A", "B"] : [groupKey];
+          aliases.forEach(alias => state.blockGroups.set(alias, {
+            layer: groupLayer,
+            color,
+            baseWeight: 1,
+            baseOpacity: 0.42,
+            baseFillOpacity: 0.11
+          }));
+        }
+        layers.push(groupLayer);
+      });
+
+      if (!layers.length) {
+        state.blockLayer = L.layerGroup(drawManualWhatsappBlocks(manualData));
+      } else {
+        const mappedGroups = new Set(Object.keys(groupZoneMap));
+        const manualFallbackGroups = new Set(
+          (manualData?.features || [])
+            .map(feature => String(feature.properties?.group || "").toUpperCase())
+            .filter(group => group && !mappedGroups.has(group))
+        );
+        state.blockLayer = L.layerGroup([
+          ...layers,
+          ...drawManualWhatsappBlocks(manualData, manualFallbackGroups)
+        ]);
+      }
+      updateMapView();
+    }
+
+    function updateBlockImpactStyles(visibleEvents) {
+      state.blockGroups.forEach(({ layer, color, baseWeight, baseOpacity, baseFillOpacity }) => {
+        if (layer.setStyle) {
+          layer.setStyle({
+            color,
+            fillColor: color,
+            weight: baseWeight,
+            opacity: baseOpacity,
+            fillOpacity: baseFillOpacity
+          });
+        }
+      });
+
+      const impacted = new Map();
+      visibleEvents.forEach(event => {
+        const active = (!event.end && !event.restored) || (state.timelineEvents.length && event.day === state.timelineDay);
+        groupsFromEvent(event).forEach(group => {
+          const current = impacted.get(group);
+          if (!current || active) impacted.set(group, { active, priority: event.priority });
+        });
+      });
+
+      impacted.forEach((impact, group) => {
+        const block = state.blockGroups.get(group);
+        if (!block?.layer?.setStyle) return;
+        const color = impact.active ? "#d62828" : impact.priority === "high" ? "#ef4a3c" : "#f77f00";
+        block.layer.setStyle({
+          color,
+          fillColor: color,
+          weight: impact.active ? 5 : 4,
+          opacity: 0.96,
+          fillOpacity: impact.active ? 0.42 : 0.28
+        });
+        if (impact.active && block.layer.bringToFront) block.layer.bringToFront();
+      });
+    }
+
+    function activeVisibleEvents(events) {
+      return events.filter(event => (!event.end && !event.restored) || (state.timelineEvents.length && event.day === state.timelineDay));
+    }
+
+    function updateActiveHighlights(visibleEvents) {
+      if (state.activeHighlightLayer) {
+        state.activeHighlightLayer.removeFrom(map);
+      }
+      const zonesById = new Map(simulatedZones.map(zone => [zone.id, zone]));
+      const layers = [];
+      uniqueEvents(activeVisibleEvents(visibleEvents)).forEach(event => {
+        const zoneIds = event.zoneIds?.length ? event.zoneIds : [event.zoneId];
+        zoneIds.forEach(zoneId => {
+          const zone = zonesById.get(zoneId);
+          if (!zone) return;
+          const layer = L.polygon(zone.latLngs, {
+            color: "#d62828",
+            weight: 6,
+            opacity: 1,
+            fillColor: "#d62828",
+            fillOpacity: 0.34,
+            lineJoin: "round",
+            lineCap: "round",
+            interactive: false
+          });
+          layers.push(layer);
+        });
+      });
+      state.activeHighlightLayer = L.layerGroup(layers).addTo(map);
+      if (state.activeHighlightLayer.bringToFront) state.activeHighlightLayer.bringToFront();
+    }
+
+    function renderZoneStats() {
+      zoneList.innerHTML = "";
+      impactChart.innerHTML = "";
+      populationChart.innerHTML = "";
+      affectedBarriosChart.innerHTML = "";
+      const impactStats = monthlyImpactStats();
+      simulatedZones.forEach(zone => {
+        const records = recordsInZone(zone);
+        const criticalRecords = records.filter(item => criticalRubros.has(item.rubro));
+        const critical = criticalRecords.length;
+        const criticalNames = criticalRecords.map(item => `${item.nombre} (${item.rubro})`);
+        state.zoneStats.set(zone.id, { total: records.length, critical, criticalNames });
+        const impact = impactStats.get(zone.id) || { outages: 0, percent: 0, active: false };
+        const linkedGroups = Object.entries(groupZoneMap)
+          .filter(([, zoneIds]) => zoneIds.includes(zone.id))
+          .map(([group]) => group);
+        const population = populationForZone(zone);
+
+        const row = document.createElement("div");
+        row.className = "zone-row";
+        row.innerHTML = `
+          <strong>${escapeHtml(zone.label)}</strong>
+          ${linkedGroups.length ? `Grupo eléctrico: ${escapeHtml(linkedGroups.join(", "))}<br>` : ""}
+          ${population ? `${formatNumber(population.population)} personas estimadas; ${formatDensity(population.density_hab_km2)}; ${populationQualityLabel(population)}<br>` : ""}
+          ${records.length} instituciones; ${critical} críticas<br>
+          Afectación: ${impact.active ? "corte activo" : `${impact.percent}%`} · ${impact.outages} cortes
+        `;
+        row.addEventListener("click", () => map.fitBounds(state.zoneLayers.get(zone.id).getBounds(), { padding: [28, 28] }));
+        zoneList.appendChild(row);
+      });
+
+      simulatedZones
+        .map(zone => ({ zone, impact: impactStats.get(zone.id) || { percent: 0, active: false } }))
+        .sort((a, b) => b.impact.percent - a.impact.percent)
+        .slice(0, 10)
+        .forEach(({ zone, impact }) => {
+          const row = document.createElement("div");
+          row.className = "bar-row";
+          const zoneStats = state.zoneStats.get(zone.id) || { critical: 0 };
+          const color = heatColor(impact.percent, impact.active, zoneStats.critical > 0);
+          row.innerHTML = `
+            <span>${escapeHtml(zone.label.replace("Bloque ", "").split(" - ")[0])}</span>
+            <span class="bar-track"><span class="bar-fill" style="width:${Math.max(impact.percent, 1)}%; background:${color}"></span></span>
+            <span>${impact.active ? "activo" : `${impact.percent}%`}</span>
+          `;
+          row.addEventListener("click", () => map.fitBounds(state.zoneLayers.get(zone.id).getBounds(), { padding: [28, 28] }));
+          impactChart.appendChild(row);
+        });
+
+      const populationRows = simulatedZones
+        .map(zone => ({ zone, population: populationForZone(zone) }))
+        .filter(item => item.population)
+        .sort((a, b) => Number(b.population.population || 0) - Number(a.population.population || 0));
+      const maxPopulation = Math.max(1, ...populationRows.map(item => Number(item.population.population || 0)));
+      renderAffectedPopulationRows(impactStats);
+      populationRows.forEach(({ zone, population }) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        const percent = Math.max(2, Math.round((Number(population.population || 0) / maxPopulation) * 100));
+        row.innerHTML = `
+          <span>${escapeHtml(zone.label.replace("Bloque ", "").split(" - ")[0])}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${percent}%; background:#04786c"></span></span>
+          <span>${formatNumber(population.population)} · ${formatDensity(population.density_hab_km2)}</span>
+        `;
+        row.addEventListener("click", () => map.fitBounds(state.zoneLayers.get(zone.id).getBounds(), { padding: [28, 28] }));
+        populationChart.appendChild(row);
+      });
+    }
+
+    function renderAffectedPopulationRows(impactStats) {
+      const activeZoneRows = simulatedZones
+        .map(zone => ({
+          zone,
+          population: populationForZone(zone),
+          impact: impactStats.get(zone.id) || { active: false, percent: 0 }
+        }))
+        .filter(item => item.population && item.impact.active)
+        .sort((a, b) => Number(b.population.population || 0) - Number(a.population.population || 0));
+
+      const affectedPeople = activeZoneRows.reduce((total, item) => total + Number(item.population.population || 0), 0);
+      const affectedHouseholds = activeZoneRows.reduce((total, item) => total + Number(item.population.households || 0), 0);
+      populationTotal.textContent = formatNumber(affectedPeople);
+      householdsTotal.textContent = formatNumber(affectedHouseholds);
+
+      if (!activeZoneRows.length) {
+        populationNote.textContent = "Sin cortes activos con impacto poblacional calculado.";
+        affectedBarriosChart.innerHTML = '<div class="empty-row">No hay barrios afectados ahora.</div>';
+        return;
+      }
+
+      populationNote.textContent = `${formatNumber(activeZoneRows.length)} barrio${activeZoneRows.length === 1 ? "" : "s"} con corte activo. Estimación operativa INDEC 2022.`;
+      const maxAffectedPopulation = Math.max(1, ...activeZoneRows.map(item => Number(item.population.population || 0)));
+      activeZoneRows.forEach(({ zone, population }) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        const percent = Math.max(2, Math.round((Number(population.population || 0) / maxAffectedPopulation) * 100));
+        row.innerHTML = `
+          <span>${escapeHtml(zone.label.replace("Bloque ", "").split(" - ")[0])}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${percent}%; background:#d62828"></span></span>
+          <span>${formatNumber(population.population)} hab · ${formatNumber(population.households)} hogares</span>
+        `;
+        row.addEventListener("click", () => map.fitBounds(state.zoneLayers.get(zone.id).getBounds(), { padding: [28, 28] }));
+        affectedBarriosChart.appendChild(row);
+      });
+    }
+
+    function findZoneFromMessage(message) {
+      const text = normalize(message);
+      return simulatedZones.find(zone => zone.aliases.some(alias => text.includes(normalize(alias))));
+    }
+
+    function findZonesFromMessage(message) {
+      const text = normalize(message);
+      const zones = simulatedZones.filter(zone => zone.aliases.some(alias => text.includes(normalize(alias))));
+      return zones.length ? zones : [];
+    }
+
+    function findZonesFromGroup(group) {
+      const normalized = String(group || "")
+        .toUpperCase()
+        .replace("GRUPO", "");
+      const tokens = normalized.match(/ISLA|Ñ|[A-Z][0-9]?/g) || [];
+      const zoneIds = [...new Set(tokens.flatMap(token => groupZoneMap[token] || []))];
+      return zoneIds.map(zoneId => simulatedZones.find(zone => zone.id === zoneId)).filter(Boolean);
+    }
+
+    function groupsFromEvent(event) {
+      const normalized = String(event.group || "")
+        .toUpperCase()
+        .replace("GRUPO", "");
+      const direct = normalized.match(/ISLA|Ñ|[A-Z][0-9]?/g) || [];
+      if (direct.length) {
+        return [...new Set(direct.map(group => group.replace(/[0-9]/g, "")))].filter(Boolean);
+      }
+      const fromZone = Object.entries(groupZoneMap)
+        .filter(([, zoneIds]) => zoneIds.includes(event.zoneId))
+        .map(([group]) => group);
+      return [...new Set(fromZone)].filter(Boolean);
+    }
+
+    function extractHour(message, marker) {
+      const text = normalize(message);
+      const pattern = marker
+        ? new RegExp(`${marker}\\s*(?:a\\s+las\\s+|desde\\s+las\\s+|las\\s+)?(\\d{1,2})(?::(\\d{2}))?`)
+        : /(?:a las|desde las|de)\s+(\d{1,2})(?::(\d{2}))?/;
+      const match = text.match(pattern);
+      if (!match) return "";
+      const hour = String(Math.min(Number(match[1]), 23)).padStart(2, "0");
+      const minute = String(match[2] || "00").padStart(2, "0");
+      return `${hour}:${minute}`;
+    }
+
+    function parseMessage(message, group = "") {
+      const text = normalize(message);
+      const groupZones = findZonesFromGroup(group);
+      const zones = groupZones.length ? groupZones : findZonesFromMessage(message);
+      if (!zones.length) return { error: "No pude relacionar el aviso con un barrio/zona de la base municipal autorizada." };
+
+      const isRestore = /\b(volvio|volvio|vuelve|restablecido|normalizado|regreso)\b/.test(text);
+      const isUnexpected = /\b(inesperado|imprevisto|sin aviso|no programado)\b/.test(text);
+      const isProgrammed = /\b(programado|mantenimiento)\b/.test(text);
+
+      if (isRestore) {
+        return {
+          action: "restore",
+          zones,
+          end: extractHour(message, "a") || extractHour(message, "las") || extractHour(message)
+        };
+      }
+
+      const range = text.match(/de\s+(\d{1,2})(?::(\d{2}))?\s+a\s+(\d{1,2})(?::(\d{2}))?/);
+      const start = range
+        ? `${String(Math.min(Number(range[1]), 23)).padStart(2, "0")}:${String(range[2] || "00").padStart(2, "0")}`
+        : extractHour(message);
+      const end = range
+        ? `${String(Math.min(Number(range[3]), 23)).padStart(2, "0")}:${String(range[4] || "00").padStart(2, "0")}`
+        : "";
+
+      return {
+        action: "outage",
+        zones,
+        start,
+        end,
+        type: isUnexpected ? "inesperado" : isProgrammed ? "programado" : "sin clasificar"
+      };
+    }
+
+    function durationText(start, end) {
+      if (!start || !end) return "en curso";
+      const minutes = durationMinutes(start, end);
+      if (!minutes) return "sin duración";
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return hours ? `${hours}h ${mins}m` : `${mins}m`;
+    }
+
+    function resolveEventZone(event) {
+      const zonesById = new Map(simulatedZones.map(zone => [zone.id, zone]));
+      if (zonesById.has(event.zoneId)) {
+        const zone = zonesById.get(event.zoneId);
+        return { ...event, zoneLabel: zone.label };
+      }
+
+      const groupZones = findZonesFromGroup(event.group || "");
+      const textZones = findZonesFromMessage(`${event.zoneLabel || ""} ${event.affectedArea || ""} ${event.message || ""}`);
+      const zone = groupZones[0] || textZones[0];
+      return zone ? { ...event, zoneId: zone.id, zoneLabel: zone.label } : null;
+    }
+
+    function isActiveEvent(event) {
+      return !event.restored && !event.end;
+    }
+
+    function eventRootId(event) {
+      const match = String(event.id || "").match(/^(db-\d+)-/);
+      return match ? match[1] : String(event.id || `${event.group || ""}-${event.createdAt || ""}-${event.message || ""}`);
+    }
+
+    function uniqueEvents(events) {
+      const byId = new Map();
+      events.forEach(event => {
+        const key = eventRootId(event);
+        if (!byId.has(key)) {
+          byId.set(key, {
+            ...event,
+            zoneLabels: event.zoneLabel ? [event.zoneLabel] : [],
+            zoneIds: event.zoneId ? [event.zoneId] : []
+          });
+          return;
+        }
+        const current = byId.get(key);
+        if (event.zoneLabel && !current.zoneLabels.includes(event.zoneLabel)) current.zoneLabels.push(event.zoneLabel);
+        if (event.zoneId && !current.zoneIds.includes(event.zoneId)) current.zoneIds.push(event.zoneId);
+        if (event.priority === "high") current.priority = "high";
+      });
+      return [...byId.values()];
+    }
+
+    function activeEventsNow() {
+      if (state.timelineEvents.length) {
+        return uniqueEvents(state.timelineEvents.filter(event => event.day === state.timelineDay));
+      }
+      return uniqueEvents(state.events.filter(isActiveEvent));
+    }
+
+    function updateCurrentOps(visibleEvents = null) {
+      const events = visibleEvents || (state.timelineEvents.length
+        ? state.timelineEvents.filter(event => event.day <= state.timelineDay)
+        : state.events);
+      const activeEvents = state.timelineEvents.length
+        ? events.filter(event => event.day === state.timelineDay)
+        : events.filter(isActiveEvent);
+      const uniqueActiveEvents = uniqueEvents(activeEvents);
+      const highPriority = uniqueActiveEvents.filter(event => event.priority === "high").length;
+      activeEventCount.textContent = uniqueActiveEvents.length;
+      criticalEventCount.textContent = highPriority;
+      focusActiveEvents.disabled = uniqueActiveEvents.length === 0;
+      if (state.lastBackendSync) {
+        backendSyncLabel.textContent = `Ultima actualizacion: ${state.lastBackendSync}`;
+      } else {
+        backendSyncLabel.textContent = "Esperando sincronizacion con avisos reales";
+      }
+    }
+
+    function dbDetailHref(event) {
+      const match = String(event.id || "").match(/^db-(\d+)-/);
+      return match ? `/cortes/${match[1]}` : "";
+    }
+
+    function focusActiveEventZones() {
+      const bounds = [];
+      activeEventsNow().forEach(event => {
+        (event.zoneIds?.length ? event.zoneIds : [event.zoneId]).forEach(zoneId => {
+          const layer = state.zoneLayers.get(zoneId);
+          if (!layer?.getBounds) return;
+          bounds.push(layer.getBounds());
+        });
+      });
+
+      if (!bounds.length) {
+        simNotice.textContent = "No hay cortes activos ubicados en el mapa.";
+        return;
+      }
+
+      const merged = bounds.reduce((acc, item) => acc.extend(item), L.latLngBounds(bounds[0]));
+      map.fitBounds(merged, { padding: [34, 34], maxZoom: 15 });
+    }
+
+    function mergeEvents(existingEvents, incomingEvents) {
+      const merged = new Map();
+      [...existingEvents, ...incomingEvents].forEach(event => {
+        const resolved = resolveEventZone(event);
+        if (!resolved || !resolved.id) return;
+        merged.set(String(resolved.id), resolved);
+      });
+      return [...merged.values()];
+    }
+
+    function saveEvents() {
+      localStorage.setItem("simulatedOutages", JSON.stringify(state.events));
+    }
+
+    function loadEvents() {
+      state.events = [];
+      localStorage.removeItem("simulatedOutages");
+      localStorage.removeItem("whatsappDemoMessage");
+      localStorage.removeItem("lastProcessedWhatsappDemoMessageId");
+      state.lastWhatsappMessageId = "";
+    }
+
+    function clearRealtimeEvents(message = "No hay cortes activos en la base. Mapa normalizado.") {
+      state.events = [];
+      state.timelineEvents = [];
+      state.timelineDay = 0;
+      state.timelineDays = 0;
+      state.lastWhatsappMessageId = "";
+      stopTimeline();
+      localStorage.removeItem("simulatedOutages");
+      localStorage.removeItem("whatsappDemoMessage");
+      localStorage.removeItem("lastProcessedWhatsappDemoMessageId");
+      updateTimelineUi();
+      simNotice.textContent = message;
+    }
+
+    function scheduleHardMapRefresh(reason = "Mapa actualizado desde la base.") {
+      if (state.hardRefreshScheduled) return;
+      state.hardRefreshScheduled = true;
+      simNotice.textContent = reason;
+      window.setTimeout(() => {
+        window.location.replace(`${window.location.pathname}?v=20260706-3&t=${Date.now()}`);
+      }, 450);
+    }
+
+    async function loadBackendEvents() {
+      try {
+        const response = await fetch(`api/cortes-activos?t=${Date.now()}`, {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (response.redirected || !response.ok) {
+          backendSyncLabel.textContent = "Sesion vencida. Volve a iniciar sesion.";
+          simNotice.textContent = "No pude sincronizar cortes activos porque la sesion no esta disponible.";
+          return false;
+        }
+        const data = await response.json();
+        const apiEvents = Array.isArray(data.events) ? data.events : [];
+        const previousEventCount = state.events.length;
+        const shouldHardRefresh = previousEventCount > 0 && apiEvents.length === 0;
+        const signature = JSON.stringify(apiEvents.map(event => ({
+          id: event.id,
+          group: event.group,
+          zoneId: event.zoneId,
+          restored: event.restored,
+          end: event.end,
+          createdAt: event.createdAt
+        })));
+        const changed = signature !== state.lastBackendSignature || previousEventCount !== apiEvents.length;
+        state.lastBackendSignature = signature;
+        if (apiEvents.length) {
+          state.events = mergeEvents([], apiEvents);
+          localStorage.removeItem("simulatedOutages");
+        } else {
+          clearRealtimeEvents();
+          if (shouldHardRefresh) {
+            scheduleHardMapRefresh("Restablecimiento detectado. Actualizando mapa...");
+          }
+        }
+        state.lastBackendSync = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+        return changed;
+      } catch {
+        clearRealtimeEvents("No pude sincronizar con la base. Se limpio el estado local del mapa.");
+        backendSyncLabel.textContent = "No se pudo sincronizar";
+        return false;
+      }
+    }
+
+    function forceMapRedraw() {
+      window.requestAnimationFrame(() => {
+        map.invalidateSize({ pan: false });
+        state.zoneLayers.forEach(layer => {
+          if (layer.redraw) layer.redraw();
+        });
+        if (state.blockLayer?.eachLayer) {
+          state.blockLayer.eachLayer(layer => {
+            if (layer.redraw) layer.redraw();
+            if (layer.eachLayer) layer.eachLayer(child => child.redraw && child.redraw());
+          });
+        }
+        if (state.activeHighlightLayer?.eachLayer) {
+          state.activeHighlightLayer.eachLayer(layer => layer.redraw && layer.redraw());
+          if (state.activeHighlightLayer.bringToFront) state.activeHighlightLayer.bringToFront();
+        }
+      });
+    }
+
+    async function refreshBackendMap(force = false) {
+      if (state.backendRefreshInFlight) return;
+      if (force && state.timelineEvents.length) {
+        stopTimeline();
+        state.timelineEvents = [];
+        state.timelineDay = 0;
+        state.timelineDays = 0;
+        updateTimelineUi();
+      }
+      if (state.timelineEvents.length) return;
+      state.backendRefreshInFlight = true;
+      try {
+        const changed = await loadBackendEvents();
+        if (force || changed) {
+          renderZoneStats();
+          renderEvents();
+          forceMapRedraw();
+        } else {
+          updateCurrentOps();
+        }
+      } finally {
+        state.backendRefreshInFlight = false;
+      }
+    }
+
+    function clearEvents() {
+      clearRealtimeEvents("Eventos eliminados. Esperando nuevas fotos desde WhatsApp.");
+      state.lastBackendSync = "";
+      renderZoneStats();
+      renderEvents();
+    }
+
+    function renderEvents() {
+      eventList.innerHTML = "";
+      const impactStats = monthlyImpactStats();
+      simulatedZones.forEach(zone => {
+        const layer = state.zoneLayers.get(zone.id);
+        styleZoneLayer(zone, layer, impactStats);
+      });
+      updateHeatLayer();
+
+      const visibleEvents = state.timelineEvents.length
+        ? state.timelineEvents.filter(event => event.day <= state.timelineDay)
+        : state.events;
+      updateBlockImpactStyles(visibleEvents);
+      updateActiveHighlights(visibleEvents);
+      updateCurrentOps(visibleEvents);
+
+      const listedEvents = uniqueEvents(visibleEvents);
+
+      if (!listedEvents.length) {
+        const empty = document.createElement("div");
+        empty.className = "event-row";
+        empty.textContent = state.timelineEvents.length
+          ? "El video esta listo. Reproducilo o mové la línea de tiempo."
+          : "Todavia no hay eventos registrados.";
+        eventList.appendChild(empty);
+        return;
+      }
+
+      listedEvents.slice().reverse().forEach(event => {
+        const isCurrentTimelineDay = state.timelineEvents.length && event.day === state.timelineDay;
+        const detailHref = dbDetailHref(event);
+        const zoneSummary = event.zoneLabels?.length > 1
+          ? `${event.zoneLabels.length} zonas afectadas: ${event.zoneLabels.slice(0, 6).join(", ")}${event.zoneLabels.length > 6 ? "..." : ""}`
+          : event.zoneLabel;
+        const typeLabel = event.restored ? "Restablecido" : event.type;
+        const sourceLabel = event.group ? `Grupo ${event.group}` : "";
+        const population = populationForEvent(event);
+        const populationLabel = population
+          ? `Población estimada: ${formatNumber(population.population)} personas · ${formatNumber(population.households)} hogares`
+          : "";
+        const metaParts = [
+          state.timelineEvents.length ? `Día ${event.day}` : "",
+          typeLabel,
+          sourceLabel
+        ].filter(Boolean);
+        const row = document.createElement("div");
+        row.className = `event-row ${event.end && !isCurrentTimelineDay || event.restored ? "" : "active"} ${event.priority}`;
+        row.innerHTML = `
+          <strong>${escapeHtml(zoneSummary || sourceLabel || "Zona sin identificar")}</strong>
+          <span>${escapeHtml(metaParts.join(" · "))}</span>
+          ${populationLabel ? `<span>${escapeHtml(populationLabel)}</span>` : ""}
+          ${event.detail ? `<span>${escapeHtml(event.detail)}</span>` : ""}
+          ${event.estimatedRestore ? `<span>Reposición: ${escapeHtml(event.estimatedRestore)}</span>` : ""}
+          ${detailHref ? `<div class="event-actions"><a class="event-link" href="${detailHref}">Abrir detalle</a></div>` : ""}
+        `;
+        row.addEventListener("click", () => {
+          const bounds = [];
+          (event.zoneIds?.length ? event.zoneIds : [event.zoneId]).forEach(zoneId => {
+            const layer = state.zoneLayers.get(zoneId);
+            if (layer?.getBounds) bounds.push(layer.getBounds());
+          });
+          if (!bounds.length) return;
+          const merged = bounds.reduce((acc, item) => acc.extend(item), L.latLngBounds(bounds[0]));
+          map.fitBounds(merged, { padding: [28, 28] });
+        });
+        eventList.appendChild(row);
+      });
+    }
+
+    function processSimulatedMessage(payload) {
+      const data = typeof payload === "string" ? { message: payload } : payload;
+      const message = data?.message || "";
+      if (!message) return;
+      if (state.timelineEvents.length) {
+        state.timelineEvents = [];
+        state.timelineDay = 0;
+        state.timelineDays = 0;
+        stopTimeline();
+        updateTimelineUi();
+      }
+
+      const parsed = parseMessage(message, data.group);
+      if (data.action) parsed.action = data.action;
+      if (data.type && data.type !== "restablecido") parsed.type = data.type;
+      if (parsed.error) {
+        simNotice.textContent = parsed.error;
+        return;
+      }
+
+      if (parsed.action === "restore") {
+        let closed = 0;
+        parsed.zones.forEach(zone => {
+          state.events
+            .filter(event => event.zoneId === zone.id && !event.restored)
+            .forEach(event => {
+              event.end = parsed.end || event.end || "restablecido";
+              event.restored = true;
+              event.restoreObservation = data.observation || "";
+              closed += 1;
+            });
+        });
+        simNotice.textContent = closed
+          ? `Restablecimiento registrado: ${closed} corte(s) cerrado(s) desde WhatsApp.`
+          : "No hay cortes activos para cerrar en esos barrios/zonas.";
+      } else {
+        parsed.zones.forEach((zone, index) => {
+          const stats = state.zoneStats.get(zone.id) || { critical: 0, criticalNames: [] };
+          const priority = priorityFor(zone, parsed.type);
+          state.events.push({
+            id: Date.now() + index,
+            message,
+            source: data.source || "text",
+            imageName: data.fileName || "",
+            observation: data.observation || "",
+            group: data.group || "",
+            affectedArea: data.affectedArea || "",
+            detail: data.detail || "",
+            estimatedRestore: data.estimatedRestore || "",
+            dateLabel: data.dateLabel || "",
+            confidence: data.confidence || "",
+            zoneId: zone.id,
+            zoneLabel: zone.label,
+            type: parsed.type,
+            start: parsed.start || "sin hora",
+            end: parsed.end,
+            priority,
+            priorityLabel: priorityLabel(priority),
+            priorityReason: priorityReason(priority, stats.critical, parsed.type),
+            criticalCount: stats.critical,
+            criticalInstitutions: stats.criticalNames || []
+          });
+        });
+        simNotice.textContent = `Foto leída y clasificada: corte ${parsed.type} registrado en ${parsed.zones.length} barrio(s)/zona(s).`;
+      }
+
+      saveEvents();
+      renderZoneStats();
+      renderEvents();
+    }
+
+    function processWhatsappStorageValue(value) {
+      if (!value) return;
+      try {
+        const payload = JSON.parse(value);
+        const messageId = String(payload?.id || payload?.message || value);
+        if (messageId === state.lastWhatsappMessageId) return;
+        state.lastWhatsappMessageId = messageId;
+        localStorage.setItem("lastProcessedWhatsappDemoMessageId", messageId);
+        simNotice.textContent = "Aviso recibido desde WhatsApp. Procesando...";
+        processSimulatedMessage(payload);
+      } catch {
+        simNotice.textContent = "No pude leer el mensaje recibido desde WhatsApp.";
+      }
+    }
+
+    function imageDataUri(src) {
+      return fetch(src)
+        .then(response => response.blob())
+        .then(blob => new Promise(resolve => {
+          const reader = new FileReader();
+          reader.addEventListener("load", () => resolve(reader.result));
+          reader.addEventListener("error", () => resolve(""));
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => "");
+    }
+
+    function excelCell(value, className = "") {
+      return `<td class="${className}">${escapeHtml(value)}</td>`;
+    }
+
+    function excelTable(headers, rows, className = "") {
+      return `
+        <table class="${className}">
+          <thead>
+            <tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `<tr>${row.map(cell => excelCell(cell)).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function downloadEventsExcel() {
+      const impactStats = monthlyImpactStats();
+      const summaryHeaders = [
+        "Barrio/zona",
+        "% afectación",
+        "Cortes",
+        "Minutos sin servicio",
+        "Estado",
+        "Instituciones",
+        "Instituciones críticas"
+      ];
+      const summaryRows = simulatedZones.map(zone => {
+        const impact = impactStats.get(zone.id) || { percent: 0, outages: 0, minutes: 0, active: false };
+        const stats = state.zoneStats.get(zone.id) || { total: 0, critical: 0 };
+        return [
+          zone.label,
+          `${impact.percent}%`,
+          impact.outages,
+          impact.minutes,
+          impact.active ? "Corte activo" : "Normalizado",
+          stats.total,
+          stats.critical
+        ];
+      });
+
+      const detailHeaders = [
+        "ID",
+        "Barrio/zona",
+        "Tipo",
+        "Inicio",
+        "Fin",
+        "Duración",
+        "Prioridad",
+        "Motivo",
+        "Instituciones críticas",
+        "Grupo red",
+        "Zona informada",
+        "Detalle extraído",
+        "Reposición estimada",
+        "Confianza lectura",
+        "Archivo imagen",
+        "Mensaje original"
+      ];
+      const eventsForExport = state.timelineEvents.length ? state.timelineEvents : state.events;
+      const detailRows = eventsForExport.map(event => [
+        event.id,
+        state.timelineEvents.length ? `Dia ${event.day} - ${event.zoneLabel}` : event.zoneLabel,
+        event.type,
+        event.start || "",
+        event.end || "en curso",
+        durationText(event.start, event.end),
+        event.priorityLabel || priorityLabel(event.priority),
+        event.priorityReason || priorityReason(event.priority, event.criticalCount, event.type),
+        (event.criticalInstitutions || []).join(" | "),
+        event.group || "",
+        event.affectedArea || "",
+        event.detail || event.observation || "",
+        event.estimatedRestore || "",
+        event.confidence || "",
+        event.imageName || "",
+        event.message || ""
+      ]);
+      const logo = await imageDataUri("assets/logo-ciudad.png");
+      const generatedAt = new Date().toLocaleString("es-AR");
+      const totalOutages = summaryRows.reduce((sum, row) => sum + Number(row[2] || 0), 0);
+      const activeBlocks = summaryRows.filter(row => row[4] === "Corte activo").length;
+      const criticalInstitutions = summaryRows.reduce((sum, row) => sum + Number(row[6] || 0), 0);
+      const mostAffected = summaryRows
+        .slice()
+        .sort((left, right) => Number(String(right[1]).replace("%", "")) - Number(String(left[1]).replace("%", "")))[0];
+      const html = `
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #17212b;
+              background: #ffffff;
+            }
+            .cover {
+              border: 1px solid #f0b23b;
+              background: #fff7df;
+              padding: 0;
+              margin-bottom: 18px;
+            }
+            .brand-band {
+              height: 14px;
+              background: #3577c7;
+            }
+            .brand-band td {
+              border: 0;
+              padding: 0;
+              height: 14px;
+            }
+            .band-cyan { background: #3577c7; }
+            .band-green { background: #4e5ab8; }
+            .band-yellow { background: #ffd437; }
+            .band-orange { background: #ff8c28; }
+            .band-red { background: #ef4a3c; }
+            .brand {
+              display: table;
+              width: 100%;
+              padding: 16px 18px;
+            }
+            .brand-logo,
+            .brand-copy {
+              display: table-cell;
+              vertical-align: middle;
+            }
+            .brand-logo {
+              width: 76px;
+            }
+            .brand-logo img {
+              max-width: 56px;
+              max-height: 74px;
+            }
+            h1 {
+              color: #156f68;
+              font-size: 24px;
+              margin: 0 0 4px;
+            }
+            .subtitle {
+              color: #ef4a3c;
+              font-weight: bold;
+              margin: 0;
+            }
+            .meta {
+              color: #667085;
+              font-size: 12px;
+              margin-top: 8px;
+            }
+            .kpis {
+              border-collapse: separate;
+              border-spacing: 8px;
+              margin: 0 0 14px;
+              width: 100%;
+            }
+            .kpis td {
+              border: 1px solid #f0d08a;
+              background: #fffaf0;
+              padding: 10px;
+            }
+            .kpis strong {
+              display: block;
+              color: #156f68;
+              font-size: 18px;
+            }
+            .kpis span {
+              color: #667085;
+              font-size: 11px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            h2 {
+              color: #156f68;
+              font-size: 16px;
+              margin: 18px 0 8px;
+              border-bottom: 3px solid #ffd437;
+              padding-bottom: 4px;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              margin-bottom: 18px;
+            }
+            th {
+              background: #156f68;
+              color: #ffffff;
+              border: 1px solid #0b5d58;
+              padding: 7px;
+              font-weight: bold;
+              text-align: left;
+            }
+            td {
+              border: 1px solid #d7dee6;
+              padding: 6px;
+              vertical-align: top;
+            }
+            tbody tr:nth-child(even) td {
+              background: #f7faf9;
+            }
+            .summary tbody tr td:nth-child(2) {
+              color: #9f2f26;
+              font-weight: bold;
+            }
+            .detail tbody tr td:nth-child(7) {
+              color: #ef4a3c;
+              font-weight: bold;
+            }
+            .summary tbody tr td:nth-child(2),
+            .summary tbody tr td:nth-child(3),
+            .summary tbody tr td:nth-child(4),
+            .summary tbody tr td:nth-child(6),
+            .summary tbody tr td:nth-child(7) {
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="cover">
+            <table class="brand-band">
+              <tr>
+                <td class="band-cyan"></td>
+                <td class="band-green"></td>
+                <td class="band-yellow"></td>
+                <td class="band-orange"></td>
+                <td class="band-red"></td>
+              </tr>
+            </table>
+            <div class="brand">
+              <div class="brand-logo">${logo ? `<img src="${logo}" alt="">` : ""}</div>
+              <div class="brand-copy">
+                <h1>Municipalidad Ciudad</h1>
+                <p class="subtitle">Reporte de cortes clasificados por barrio/zona autorizada</p>
+                <p class="meta">Generado desde el mapa operativo de instituciones · ${escapeHtml(generatedAt)}</p>
+              </div>
+            </div>
+          </div>
+          <table class="kpis">
+            <tr>
+              <td><strong>${escapeHtml(totalOutages)}</strong><span>Cortes registrados</span></td>
+              <td><strong>${escapeHtml(activeBlocks)}</strong><span>Barrios/zonas activos</span></td>
+              <td><strong>${escapeHtml(criticalInstitutions)}</strong><span>Instituciones críticas</span></td>
+              <td><strong>${escapeHtml(mostAffected ? mostAffected[0] : "-")}</strong><span>Mayor afectación</span></td>
+            </tr>
+          </table>
+          <h2>Resumen por barrio/zona</h2>
+          ${excelTable(summaryHeaders, summaryRows, "summary")}
+          <h2>Detalle de cortes</h2>
+          ${excelTable(detailHeaders, detailRows, "detail")}
+        </body>
+        </html>
+      `;
+      const blob = new Blob(["\ufeff" + html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "reporte_cortes_municipalidad_ciudad.xls";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function applyFilters() {
+      let visible = 0;
+      const bounds = [];
+      const matches = [];
+      clusterLayer.clearLayers();
+      state.markers.forEach(({ item, marker }) => {
+        const searchMatch = matchesSearch(item);
+        const show = (state.search ? searchMatch : state.activeRubros.has(item.rubro));
+        if (show) {
+          clusterLayer.addLayer(marker);
+          visible += 1;
+          bounds.push(marker.getLatLng());
+          if (searchMatch) matches.push(item);
+        } else {
+          clusterLayer.removeLayer(marker);
+        }
+      });
+      visibleCount.textContent = visible;
+      renderSearchResults(matches);
+      if (bounds.length) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
+    }
+
+    function renderRubros() {
+      const counts = new Map();
+      state.records.forEach(item => counts.set(item.rubro, (counts.get(item.rubro) || 0) + 1));
+      rubrosPanel.innerHTML = "";
+      [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([rubro, count]) => {
+        colorFor(rubro);
+        state.activeRubros.add(rubro);
+        const row = document.createElement("label");
+        row.className = "rubro";
+        row.innerHTML = `
+          <input type="checkbox" checked data-rubro="${escapeHtml(rubro)}">
+          <span><i class="swatch" style="background:${colorFor(rubro)}"></i> ${escapeHtml(rubro)}</span>
+          <span class="count">${count}</span>
+        `;
+        row.querySelector("input").addEventListener("change", event => {
+          if (event.target.checked) state.activeRubros.add(rubro);
+          else state.activeRubros.delete(rubro);
+          applyFilters();
+        });
+        rubrosPanel.appendChild(row);
+      });
+    }
+
+    function init(data, officialBoundaries = null, groupsData = null, manualGroupsData = null, populationData = null) {
+      simulatedZones = officialZonesFromGeoJson(officialBoundaries);
+      applyGroupMappings(groupsData);
+      setPopulationData(populationData);
+      const all = (data.instituciones || []).filter(item => isCiudadItem(item));
+      const missing = all.filter(item => !item.lat || !item.lon).length;
+      state.records = all.filter(item => item.lat && item.lon);
+      totalCount.textContent = state.records.length;
+      notice.textContent = !simulatedZones.length
+        ? "No se pudo cargar la base municipal autorizada de barrios."
+        : missing
+        ? `${missing} registros quedaron sin coordenadas y no se muestran hasta revisar/geocodificar la dirección.`
+        : "Todas las instituciones cargadas tienen coordenadas.";
+
+      renderRubros();
+      state.markers = state.records.map(item => {
+        const marker = L.marker([item.lat, item.lon], { icon: markerIcon(colorFor(item.rubro), item.rubro) });
+        marker.bindPopup(popupFor(item), { maxWidth: 320 });
+        return { item, marker };
+      });
+      drawZones();
+      drawWhatsappBlocks(groupsData, manualGroupsData);
+      renderZoneStats();
+      loadEvents();
+      renderEvents();
+      refreshBackendMap(true);
+      updateTimelineUi();
+      updateMapView();
+      applyFilters();
+    }
+
+    document.querySelector("#search").addEventListener("input", event => {
+      state.search = normalize(event.target.value.trim());
+      applyFilters();
+    });
+
+    document.querySelector("#selectAll").addEventListener("click", () => {
+      state.activeRubros = new Set(state.records.map(item => item.rubro));
+      rubrosPanel.querySelectorAll("input").forEach(input => input.checked = true);
+      applyFilters();
+    });
+
+    document.querySelector("#clearAll").addEventListener("click", () => {
+      state.activeRubros.clear();
+      rubrosPanel.querySelectorAll("input").forEach(input => input.checked = false);
+      applyFilters();
+    });
+
+    document.querySelector("#clearEvents").addEventListener("click", clearEvents);
+    focusActiveEvents.addEventListener("click", focusActiveEventZones);
+    refreshBackendEvents.addEventListener("click", () => {
+      refreshBackendEvents.disabled = true;
+      refreshBackendEvents.textContent = "Actualizando...";
+      refreshBackendMap(true).then(() => {
+        simNotice.textContent = "Cortes activos actualizados desde la base.";
+      }).finally(() => {
+        refreshBackendEvents.disabled = false;
+        refreshBackendEvents.textContent = "Actualizar";
+      });
+    });
+    document.querySelector("#simulateMonth").addEventListener("click", () => startTimeline(30));
+    document.querySelector("#simulateTwoMonths").addEventListener("click", () => startTimeline(60));
+    loadHistoryTimeline.addEventListener("click", loadHistoricalTimeline);
+    viewButtons.heat.addEventListener("click", () => setMapView("heat"));
+    viewButtons.barrio.addEventListener("click", () => setMapView("barrio"));
+    viewButtons.density.addEventListener("click", () => setMapView("density"));
+    viewButtons.blocks.addEventListener("click", () => setMapView("blocks"));
+    playTimeline.addEventListener("click", playTimelineFrames);
+    pauseTimeline.addEventListener("click", () => {
+      stopTimeline();
+      updateTimelineUi();
+    });
+    resetTimeline.addEventListener("click", resetTimelineFrames);
+    timelineRange.addEventListener("input", event => {
+      stopTimeline();
+      renderTimelineFrame(Number(event.target.value));
+    });
+
+    const menuSections = [...document.querySelectorAll(".panel-section")];
+    function closeMenuSections(except = null) {
+      menuSections.forEach(section => {
+        if (section !== except) section.removeAttribute("open");
+      });
+    }
+
+    function keepMenuInsideViewport(section) {
+      const body = section.querySelector(".panel-section-body");
+      if (!body) return;
+      body.style.transform = "";
+      window.requestAnimationFrame(() => {
+        const rect = body.getBoundingClientRect();
+        const margin = 12;
+        if (rect.left < margin) {
+          body.style.transform = `translateX(${margin - rect.left}px)`;
+        } else if (rect.right > window.innerWidth - margin) {
+          body.style.transform = `translateX(${window.innerWidth - margin - rect.right}px)`;
+        }
+      });
+    }
+
+    menuSections.forEach(section => {
+      section.addEventListener("toggle", () => {
+        if (section.open) {
+          closeMenuSections(section);
+          keepMenuInsideViewport(section);
+        }
+      });
+    });
+
+    document.addEventListener("pointerdown", event => {
+      if (event.target.closest(".panel-section")) return;
+      closeMenuSections();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeMenuSections();
+    });
+
+    window.setInterval(() => {
+      refreshBackendMap();
+    }, 5000);
+
+    Promise.all([
+      fetch("data/instituciones.json?v=20260708-pozos").then(response => response.json()),
+      fetch("data/zonas_municipales.geojson")
+        .then(response => response.ok ? response.json() : null)
+        .catch(() => null),
+      fetch("data/grupos_wsp_zonas.json")
+        .then(response => response.ok ? response.json() : null)
+        .catch(() => null),
+      fetch("data/grupos_whatsapp_manual.geojson")
+        .then(response => response.ok ? response.json() : null)
+        .catch(() => null),
+      fetch("data/poblacion_por_zona_2022.json")
+        .then(response => response.ok ? response.json() : null)
+        .catch(() => null)
+    ])
+      .then(([instituciones, zonasMunicipales, grupos, gruposManuales, poblacion]) => init(instituciones, zonasMunicipales, grupos, gruposManuales, poblacion))
+      .catch(() => {
+        notice.textContent = "No se pudo cargar data/instituciones.json. Ejecutá tools/build_map.py primero.";
+      });
+  </script>
+</body>
+</html>

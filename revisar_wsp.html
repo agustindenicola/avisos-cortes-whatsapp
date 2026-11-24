@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revisión grupos WSP</title>
+  <style>
+    :root {
+      --bg: #eef2f5;
+      --panel: #ffffff;
+      --text: #17212b;
+      --muted: #667085;
+      --line: #d7dee6;
+      --accent: #0f766e;
+      --warn: #f77f00;
+      --danger: #d62828;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    main {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 40px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0 0 5px; font-size: 25px; letter-spacing: 0; }
+    p { margin: 0; color: var(--muted); line-height: 1.42; }
+    a {
+      color: var(--accent);
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .stat,
+    .group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .stat { padding: 12px; }
+    .stat strong { display: block; font-size: 24px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      font: inherit;
+    }
+    button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 12px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button.active {
+      border-color: rgba(247,127,0,.5);
+      background: #fff7ed;
+      color: #9a5800;
+    }
+    .groups {
+      display: grid;
+      gap: 12px;
+    }
+    .group {
+      padding: 14px;
+    }
+    .group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .group h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border-radius: 999px;
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 900;
+      background: #e6f7f4;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .badge.warn {
+      background: #fff7ed;
+      color: #9a5800;
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    h3 {
+      margin: 0 0 7px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.45;
+      font-size: 13px;
+    }
+    li.review { color: #9a5800; }
+    small { color: var(--muted); }
+    .perimeter {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 760px) {
+      header, .toolbar, .cols { display: block; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      header a { display: inline-block; margin-top: 8px; }
+      .cols > div + div { margin-top: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Revisión grupos WSP</h1>
+        <p>Mapeo semiautomático desde el Excel validado de la cooperativa contra las zonas municipales.</p>
+      </div>
+      <a href="/mapa.html">Ver mapa</a>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><strong id="groupCount">0</strong><span>grupos</span></div>
+      <div class="stat"><strong id="zoneCount">0</strong><span>zonas detectadas</span></div>
+      <div class="stat"><strong id="reviewCount">0</strong><span>grupos a revisar</span></div>
+      <div class="stat"><strong id="termCount">0</strong><span>términos dudosos</span></div>
+    </section>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Buscar grupo, barrio, término...">
+      <button id="onlyReview" type="button">Solo revisión</button>
+    </div>
+
+    <section id="groups" class="groups"></section>
+  </main>
+
+  <script>
+    const groupsEl = document.querySelector("#groups");
+    const searchEl = document.querySelector("#search");
+    const onlyReviewEl = document.querySelector("#onlyReview");
+    let data = null;
+    let streetData = null;
+    let search = "";
+    let onlyReview = false;
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function normalize(value) {
+      return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function renderStats() {
+      const groups = data.groups || [];
+      const uniqueZones = new Set(groups.flatMap(group => group.barrios.map(zone => zone.id)));
+      document.querySelector("#groupCount").textContent = groups.length;
+      document.querySelector("#zoneCount").textContent = uniqueZones.size;
+      document.querySelector("#reviewCount").textContent = groups.filter(group => group.requires_review).length;
+      document.querySelector("#termCount").textContent = groups.reduce((sum, group) => sum + group.review_terms.length, 0);
+    }
+
+    function groupMatches(group) {
+      const text = normalize(`${group.label} ${group.perimeter} ${group.barrios.map(zone => zone.label).join(" ")} ${group.review_terms.map(term => term.term).join(" ")}`);
+      return !search || text.includes(normalize(search));
+    }
+
+    function renderGroups() {
+      groupsEl.innerHTML = "";
+      (data.groups || [])
+        .filter(group => (!onlyReview || group.requires_review) && groupMatches(group))
+        .forEach(group => {
+          const card = document.createElement("article");
+          card.className = "group";
+          card.innerHTML = `
+            <div class="group-head">
+              <div>
+                <h2>${escapeHtml(group.label)}</h2>
+                <small>${escapeHtml(group.whatsapp || "")}</small>
+              </div>
+              <span class="badge ${group.requires_review ? "warn" : ""}">${group.requires_review ? "Revisar" : "OK"}</span>
+            </div>
+            <div class="cols">
+              <div>
+                <h3>Zonas detectadas (${group.barrios.length})</h3>
+                <ul>
+                  ${group.barrios.length ? group.barrios.map(zone => `
+                    <li class="${zone.needs_review ? "review" : ""}">
+                      ${escapeHtml(zone.label)}
+                      ${zone.needs_review ? " · revisar parcial/perímetro" : ""}
+                    </li>`).join("") : "<li>Sin zonas detectadas</li>"}
+                </ul>
+              </div>
+              <div>
+                <h3>Términos a revisar (${group.review_terms.length})</h3>
+                <ul>
+                  ${group.review_terms.length ? group.review_terms.map(term => `
+                    <li class="review">
+                      ${escapeHtml(term.term)}
+                      <small> · ${escapeHtml(term.reason)}</small>
+                      ${term.matches.length ? `<br><small>Sugerido: ${escapeHtml(term.matches.map(match => match.label).join(", "))}</small>` : ""}
+                      ${streetSuggestions(group.group, term.term)}
+                    </li>`).join("") : "<li>Sin pendientes</li>"}
+                </ul>
+              </div>
+            </div>
+            <div class="perimeter">${escapeHtml(group.perimeter || "Sin perímetro cargado")}</div>
+          `;
+          groupsEl.appendChild(card);
+        });
+    }
+
+    function streetSuggestions(groupKey, termText) {
+      const group = streetData?.groups?.find(item => item.group === groupKey);
+      const term = group?.terms?.find(item => item.term === termText);
+      if (!term) return "";
+      const rows = term.matches
+        .filter(match => match.streets.length)
+        .map(match => `${match.phrase}: ${[...new Set(match.streets.map(street => street.name))].slice(0, 4).join(", ")}`);
+      return rows.length ? `<br><small>Calles: ${escapeHtml(rows.join(" · "))}</small>` : "";
+    }
+
+    searchEl.addEventListener("input", () => {
+      search = searchEl.value;
+      renderGroups();
+    });
+    onlyReviewEl.addEventListener("click", () => {
+      onlyReview = !onlyReview;
+      onlyReviewEl.classList.toggle("active", onlyReview);
+      renderGroups();
+    });
+
+    Promise.all([
+      fetch("data/grupos_wsp_zonas.json").then(response => response.json()),
+      fetch("data/grupos_wsp_calles.json").then(response => response.ok ? response.json() : null).catch(() => null)
+    ])
+      .then(([payload, streets]) => {
+        data = payload;
+        streetData = streets;
+        renderStats();
+        renderGroups();
+      });
+  </script>
+</body>
+</html>

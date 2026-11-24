@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cortes activos · Municipalidad Ciudad</title>
+  <style>
+    :root {
+      --bg: #eef2f8;
+      --panel: #ffffff;
+      --text: #17213a;
+      --muted: #66708a;
+      --line: #d8ddeb;
+      --cyan: #3577c7;
+      --green: #6d62bf;
+      --accent: #4e5ab8;
+      --brand-violet: #7a2c91;
+      --yellow: #ffd437;
+      --orange: #ff8c28;
+      --red: #ef4a3c;
+      --danger: #d62828;
+      --brand-gradient: linear-gradient(135deg, #3577c7, #4e5ab8, #7a2c91);
+      --shadow: 0 16px 36px rgba(44, 52, 116, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(135deg, rgba(53,119,199,.14), rgba(78,90,184,.12), rgba(122,44,145,.10)),
+        var(--bg);
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 0 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand img {
+      width: 220px;
+      max-height: 78px;
+      object-fit: contain;
+      flex: 0 0 auto;
+      border-radius: 6px;
+    }
+
+    .brand strong,
+    .brand span {
+      display: block;
+    }
+
+    .brand strong {
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 3px;
+    }
+
+    .map-button,
+    .secondary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 18px;
+      color: #fff;
+      background: var(--brand-gradient);
+      font-size: 15px;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .secondary-button {
+      color: var(--text);
+      background: #fff;
+      border-color: var(--line);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .status-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+      min-height: 86px;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--danger);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .event-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .event-card {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .event-strip {
+      background: var(--danger);
+    }
+
+    .event-main {
+      padding: 14px 0;
+      min-width: 0;
+    }
+
+    .event-main strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .event-main span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin-top: 5px;
+    }
+
+    .event-meta {
+      display: grid;
+      align-content: center;
+      justify-items: end;
+      gap: 4px;
+      padding: 12px 14px 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      border-radius: 999px;
+      padding: 0 10px;
+      color: #fff;
+      background: var(--danger);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.72);
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .side-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .signal-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 18px;
+    }
+
+    .signal-card strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .signal-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .heat-line {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #42b6c4, #7fe07a, #f4e04d, #f77f00, #d62828);
+      margin-top: 12px;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 820px) {
+      header,
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        display: grid;
+      }
+
+      .map-button {
+        width: 100%;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .event-card {
+        grid-template-columns: 8px minmax(0, 1fr);
+      }
+
+      .event-meta {
+        grid-column: 2;
+        justify-items: start;
+        padding: 0 12px 14px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="brand">
+        <img src="assets/logo-ciudad.png" alt="">
+        <div>
+          <strong>Estado operativo de cortes</strong>
+          <span>Panel municipal</span>
+        </div>
+      </div>
+      <a class="map-button" href="mapa.html">Mapa</a>
+    </header>
+
+    <section class="hero">
+      <section class="status-panel" aria-live="polite">
+        <h1>Cortes activos</h1>
+        <p class="lede" id="lastUpdate">Cargando estado actual...</p>
+
+        <div class="summary">
+          <div class="metric">
+            <strong id="activeCount">0</strong>
+            <span>activos</span>
+          </div>
+          <div class="metric">
+            <strong id="activeZones">0</strong>
+            <span>zonas</span>
+          </div>
+          <div class="metric">
+            <strong id="highPriority">0</strong>
+            <span>prioridad alta</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="map-button" href="mapa.html">Ver mapa de cortes</a>
+          <button class="secondary-button" type="button" id="refreshButton">Actualizar</button>
+        </div>
+
+        <div class="event-list" id="eventList"></div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="signal-card">
+          <strong>Mapa operativo</strong>
+          <p>La vista completa mantiene mapa de calor, bloques, barrios oficiales 2026, simulación mensual y descarga de reporte.</p>
+          <div class="heat-line"></div>
+        </div>
+        <div class="signal-card">
+          <strong>Fuente</strong>
+          <p>Esta pantalla lee los cortes guardados por el mapa en este navegador. Al procesar nuevos avisos, la portada se actualiza.</p>
+        </div>
+      </aside>
+    </section>
+
+    <footer id="sourceInfo">Base municipal Ciudad 2026.</footer>
+  </main>
+
+  <script>
+    const activeCount = document.querySelector("#activeCount");
+    const activeZones = document.querySelector("#activeZones");
+    const highPriority = document.querySelector("#highPriority");
+    const eventList = document.querySelector("#eventList");
+    const lastUpdate = document.querySelector("#lastUpdate");
+    const refreshButton = document.querySelector("#refreshButton");
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    let backendEvents = [];
+
+    function loadBrowserEvents() {
+      try {
+        const events = JSON.parse(localStorage.getItem("simulatedOutages") || "[]");
+        return Array.isArray(events) ? events : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function mergeEvents(browserEvents, apiEvents) {
+      const merged = new Map();
+      [...apiEvents, ...browserEvents].forEach(event => {
+        if (!event || !event.id) return;
+        merged.set(String(event.id), event);
+      });
+      return [...merged.values()];
+    }
+
+    async function loadBackendEvents() {
+      try {
+        const response = await fetch("api/cortes-activos", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        backendEvents = Array.isArray(data.events) ? data.events : [];
+      } catch {
+        backendEvents = [];
+      }
+    }
+
+    function isActive(event) {
+      return !event.restored && !event.end;
+    }
+
+    function priorityText(event) {
+      return event.priorityLabel || (event.priority === "high" ? "Prioridad 1" : event.priority === "medium" ? "Prioridad 2" : "Prioridad 3");
+    }
+
+    function typeText(event) {
+      const type = String(event.type || "").toLowerCase();
+      if (type === "programado") return "Programado";
+      if (type === "restablecido") return "Restablecido";
+      return "Imprevisto";
+    }
+
+    function render() {
+      const events = mergeEvents(loadBrowserEvents(), backendEvents);
+      const active = events.filter(isActive).sort((left, right) => String(right.id || "").localeCompare(String(left.id || "")));
+      const zones = new Set(active.map(event => event.zoneLabel || event.affectedArea || event.zoneId).filter(Boolean));
+      const high = active.filter(event => event.priority === "high" || event.priorityLabel === "Prioridad 1");
+
+      activeCount.textContent = active.length;
+      activeZones.textContent = zones.size;
+      highPriority.textContent = high.length;
+      lastUpdate.textContent = `Actualizado ${new Date().toLocaleString("es-AR")}.`;
+
+      if (!active.length) {
+        eventList.innerHTML = '<div class="empty">No hay cortes activos cargados en este momento.</div>';
+        return;
+      }
+
+      eventList.innerHTML = active.map(event => {
+        const zone = event.zoneLabel || event.affectedArea || "Zona sin identificar";
+        const detail = event.detail || event.observation || event.message || "Sin detalle adicional.";
+        const group = event.group ? `Grupo ${event.group}` : "";
+        const start = event.start ? `Inicio ${event.start}` : "Inicio sin horario";
+        const estimate = event.estimatedRestore ? `Reposición estimada: ${event.estimatedRestore}` : "";
+        return `
+          <article class="event-card">
+            <div class="event-strip"></div>
+            <div class="event-main">
+              <strong>${escapeHtml(zone)}</strong>
+              <span>${escapeHtml([typeText(event), group, start, estimate].filter(Boolean).join(" · "))}</span>
+              <span>${escapeHtml(detail)}</span>
+            </div>
+            <div class="event-meta">
+              <span class="badge">${escapeHtml(priorityText(event))}</span>
+              <span>${escapeHtml(event.confidence ? `${event.confidence}% lectura` : "")}</span>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function refresh() {
+      await loadBackendEvents();
+      render();
+    }
+
+    refreshButton.addEventListener("click", refresh);
+    window.addEventListener("storage", event => {
+      if (event.key === "simulatedOutages") render();
+    });
+    window.setInterval(refresh, 5000);
+    refresh();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plano municipal editable</title>
+  <style>
+    :root {
+      --bg: #eef2f5;
+      --panel: #ffffff;
+      --text: #17212b;
+      --muted: #64748b;
+      --line: #d7dee6;
+      --accent: #0f766e;
+      --accent-soft: #dff7f2;
+      --warn: #f77f00;
+      --danger: #d62828;
+      --shadow: 0 12px 28px rgba(23, 33, 43, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(340px, 430px) 1fr;
+      height: 100vh;
+    }
+
+    aside {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 16px;
+      overflow: auto;
+      box-shadow: var(--shadow);
+      z-index: 5;
+    }
+
+    h1 {
+      font-size: 21px;
+      line-height: 1.15;
+      margin: 0 0 6px;
+      letter-spacing: 0;
+    }
+
+    p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0 0 14px;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    select,
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    select,
+    input[type="search"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      min-height: 38px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 74px;
+      resize: vertical;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    button.primary {
+      border-color: transparent;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.warn {
+      border-color: rgba(247, 127, 0, .34);
+      background: #fff7ed;
+      color: #9a5800;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+    }
+
+    .tabs,
+    .actions,
+    .mini-actions,
+    .filters {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tabs {
+      grid-template-columns: repeat(3, 1fr);
+      margin: 12px 0;
+    }
+
+    .tabs button.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .actions {
+      grid-template-columns: 1fr 1fr;
+      margin-top: 10px;
+    }
+
+    .mini-actions {
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-top: 8px;
+    }
+
+    .filters {
+      grid-template-columns: 1fr auto;
+      align-items: end;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fbfdff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .selected {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 10px;
+      margin-top: 12px;
+    }
+
+    .selected-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .selected-title strong {
+      font-size: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 0 9px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .zone-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .zone-row {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .zone-row:hover,
+    .zone-row.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .zone-row.assigned {
+      border-left: 4px solid var(--accent);
+    }
+
+    .zone-row small {
+      color: var(--muted);
+    }
+
+    .stage {
+      position: relative;
+      overflow: auto;
+      background: #dfe6ee;
+      cursor: grab;
+    }
+
+    .map-wrap {
+      position: relative;
+      width: calc(3370px * var(--zoom, .42));
+      height: calc(2384px * var(--zoom, .42));
+      margin: 18px auto;
+    }
+
+    .map-canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 3370px;
+      height: 2384px;
+      transform: scale(var(--zoom, .42));
+      transform-origin: 0 0;
+      background: #fff;
+      box-shadow: 0 10px 26px rgba(23, 33, 43, .12);
+    }
+
+    .maps {
+      display: grid;
+      gap: 22px;
+      padding: 18px;
+    }
+
+    .map-wrap img,
+    .overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-wrap img {
+      display: block;
+      object-fit: contain;
+    }
+
+    .overlay {
+      z-index: 2;
+    }
+
+    .zone-path {
+      cursor: pointer;
+      vector-effect: non-scaling-stroke;
+      stroke: #334155;
+      stroke-width: 1.1;
+      stroke-opacity: .28;
+      fill: #ffffff;
+      fill-opacity: .001;
+      pointer-events: all;
+    }
+
+    .zone-path:hover {
+      stroke: var(--warn);
+      stroke-width: 7;
+      stroke-opacity: 1;
+      fill: #f77f00;
+      fill-opacity: .16;
+    }
+
+    .zone-path.selected-path {
+      stroke: var(--danger);
+      stroke-width: 8;
+      stroke-opacity: 1;
+      fill: var(--danger);
+      fill-opacity: .20;
+    }
+
+    .zone-path.assigned-path {
+      stroke: #334155;
+      stroke-width: 1.1;
+      stroke-opacity: .28;
+      fill-opacity: .001;
+    }
+
+    .zone-path.assigned-path:hover {
+      stroke: var(--warn);
+      stroke-width: 7;
+      stroke-opacity: 1;
+      fill: #f77f00;
+      fill-opacity: .16;
+    }
+
+    .zoom-tools {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 10px;
+      pointer-events: none;
+    }
+
+    .zoom-tools button {
+      width: 34px;
+      min-height: 34px;
+      padding: 0;
+      pointer-events: auto;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 4px 12px rgba(23, 33, 43, .12);
+    }
+
+    .layer-tools {
+      position: sticky;
+      top: 54px;
+      z-index: 4;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 0 10px 10px;
+      pointer-events: none;
+    }
+
+    .layer-tools button {
+      min-height: 34px;
+      padding: 0 10px;
+      pointer-events: auto;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 4px 12px rgba(23, 33, 43, .12);
+    }
+
+    .layer-tools button.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .map-tooltip {
+      position: fixed;
+      z-index: 20;
+      display: none;
+      max-width: 260px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.96);
+      color: var(--text);
+      box-shadow: 0 8px 22px rgba(23, 33, 43, .16);
+      font-size: 12px;
+      line-height: 1.3;
+      pointer-events: none;
+    }
+
+    .map-tooltip strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    body.hide-zones .zone-path {
+      stroke-opacity: 0;
+      fill-opacity: 0;
+      pointer-events: none;
+    }
+
+    .notice {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,.22);
+      vertical-align: -2px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside>
+      <h1>Plano municipal editable</h1>
+      <p>Validá cada barrio/zona sobre el plano municipal original y asignale número, nombre y observación. Esta base queda separada de los grupos de WhatsApp.</p>
+
+      <div class="tabs">
+        <button type="button" data-page="1" class="active">Mapa 1</button>
+        <button type="button" data-page="2">Pág. 2</button>
+        <button type="button" data-page="3">Pág. 3</button>
+      </div>
+
+      <section class="stats">
+        <div class="stat"><strong id="zoneCount">0</strong><span>zonas</span></div>
+        <div class="stat"><strong id="assignedCount">0</strong><span>asignadas</span></div>
+        <div class="stat"><strong id="pendingCount">0</strong><span>pendientes</span></div>
+      </section>
+
+      <div class="filters">
+        <div>
+          <label for="search">Buscar</label>
+          <input id="search" type="search" placeholder="ID, número, nombre...">
+        </div>
+        <button id="onlyPending" type="button">Pendientes</button>
+      </div>
+
+      <section class="selected">
+        <div class="selected-title">
+          <strong id="selectedTitle">Sin zona seleccionada</strong>
+          <span id="selectedArea" class="pill">-</span>
+        </div>
+
+        <label for="legendSelect">Número y nombre</label>
+        <select id="legendSelect" disabled></select>
+
+        <label for="customName">Nombre corregido</label>
+        <input id="customName" type="search" placeholder="Opcional" disabled>
+
+        <label for="zoneType">Tipo</label>
+        <select id="zoneType" disabled>
+          <option value="barrio_loteo">Barrio / loteo</option>
+          <option value="renabap">RENABAP</option>
+          <option value="referencia">Referencia</option>
+          <option value="descartar">Descartar</option>
+        </select>
+
+        <label for="notes">Observación</label>
+        <textarea id="notes" placeholder="Observación del grupo/zona" disabled></textarea>
+
+        <div class="actions">
+          <button id="saveAssignment" class="primary" type="button" disabled>Guardar</button>
+          <button id="clearAssignment" type="button" disabled>Quitar</button>
+        </div>
+        <div class="mini-actions">
+          <button id="prevZone" type="button">Anterior</button>
+          <button id="zoomZone" type="button" disabled>Enfocar</button>
+          <button id="nextZone" type="button">Siguiente</button>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="exportJson" class="primary" type="button">Exportar JSON</button>
+        <button id="resetPage" class="warn" type="button">Limpiar página</button>
+      </div>
+
+      <p class="notice" id="notice">Cargando datos extraídos...</p>
+      <div id="zoneList" class="zone-list"></div>
+    </aside>
+
+    <section class="stage" id="stage">
+      <div class="zoom-tools">
+        <button id="zoomOut" type="button" title="Alejar">-</button>
+        <button id="zoomReset" type="button" title="Restablecer">100</button>
+        <button id="zoomIn" type="button" title="Acercar">+</button>
+      </div>
+      <div class="layer-tools">
+        <button id="toggleZones" class="active" type="button">Zonas PDF</button>
+        <button id="toggleInstitutions" type="button" disabled title="Requiere calibrar el plano con coordenadas reales">Instituciones</button>
+      </div>
+      <div id="maps" class="maps"></div>
+    </section>
+  </main>
+  <div id="mapTooltip" class="map-tooltip"></div>
+
+  <script>
+    const DATA_URL = "data/plano_pdf/zonas_extraidas_preliminar.json";
+    const STORAGE_KEY = "barriosLoteosZonaAssignmentsV1";
+
+    const state = {
+      data: null,
+      page: "1",
+      selectedId: "",
+      onlyPending: false,
+      search: "",
+      zoom: 0.42,
+      showZones: true,
+      assignments: loadAssignments()
+    };
+
+    const tabs = [...document.querySelectorAll(".tabs button")];
+    const zoneCount = document.querySelector("#zoneCount");
+    const assignedCount = document.querySelector("#assignedCount");
+    const pendingCount = document.querySelector("#pendingCount");
+    const zoneList = document.querySelector("#zoneList");
+    const notice = document.querySelector("#notice");
+    const maps = document.querySelector("#maps");
+    const stage = document.querySelector("#stage");
+    const selectedTitle = document.querySelector("#selectedTitle");
+    const selectedArea = document.querySelector("#selectedArea");
+    const legendSelect = document.querySelector("#legendSelect");
+    const customName = document.querySelector("#customName");
+    const zoneType = document.querySelector("#zoneType");
+    const notes = document.querySelector("#notes");
+    const saveAssignment = document.querySelector("#saveAssignment");
+    const clearAssignment = document.querySelector("#clearAssignment");
+    const zoomZone = document.querySelector("#zoomZone");
+    const search = document.querySelector("#search");
+    const onlyPending = document.querySelector("#onlyPending");
+    const mapTooltip = document.querySelector("#mapTooltip");
+    const toggleZones = document.querySelector("#toggleZones");
+
+    function loadAssignments() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function seedAutoAssignments() {
+      let changed = false;
+      Object.entries(state.data.pages).forEach(([page, pageData]) => {
+        pageData.zones.forEach((zone, index) => {
+          const id = zoneId(page, index);
+          if (state.assignments[id] || !zone.auto_assignment) return;
+          state.assignments[id] = {
+            id,
+            page: Number(page),
+            sourcePathIndex: zone.source_path_index,
+            number: zone.auto_assignment.number,
+            name: zone.auto_assignment.name,
+            customName: "",
+            type: "barrio_loteo",
+            notes: "",
+            fillRgbPercent: zone.fill_rgb_percent,
+            bounds: zone.bounds,
+            transform: zone.transform,
+            pathD: zone.path_d,
+            auto: true,
+            autoSource: zone.auto_assignment.source
+          };
+          changed = true;
+        });
+      });
+      if (changed) saveAssignments();
+    }
+
+    function saveAssignments() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.assignments));
+    }
+
+    function zoneId(page, index) {
+      return `p${page}-z${String(index + 1).padStart(3, "0")}`;
+    }
+
+    function rgbPercentToCss(values) {
+      const parts = values.map(value => Math.round(value * 2.55));
+      return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function normalize(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function currentZones() {
+      const pages = [state.page];
+      return pages.flatMap(page => state.data.pages[page].zones.map((zone, index) => ({
+        ...zone,
+        id: zoneId(page, index),
+        page,
+        index
+      })));
+    }
+
+    function selectedZone() {
+      return currentZones().find(zone => zone.id === state.selectedId);
+    }
+
+    function assignmentFor(id) {
+      return state.assignments[id] || null;
+    }
+
+    function legendRows() {
+      const zone = selectedZone();
+      const page = zone?.page || state.page;
+      return state.data.legend[page] || [];
+    }
+
+    function assignmentText(assignment) {
+      if (!assignment) return "Sin asignar";
+      const prefix = assignment.number ? `${assignment.number} - ` : "";
+      const suffix = assignment.auto ? " · auto" : "";
+      return `${prefix}${assignment.name || "Sin nombre"}${suffix}`;
+    }
+
+    function assignmentTitle(assignment, fallbackId) {
+      if (!assignment) return fallbackId;
+      const prefix = assignment.number ? `${assignment.number}: ` : "";
+      return `${prefix}${assignment.name || fallbackId}`;
+    }
+
+    function showTooltip(event, zone) {
+      const assignment = assignmentFor(zone.id);
+      mapTooltip.innerHTML = `
+        <strong>${escapeHtml(assignmentTitle(assignment, zone.id))}</strong>
+        ${escapeHtml(zone.id)} · Mapa ${escapeHtml(zone.page)}
+      `;
+      mapTooltip.style.display = "block";
+      moveTooltip(event);
+    }
+
+    function moveTooltip(event) {
+      if (mapTooltip.style.display !== "block") return;
+      const offset = 14;
+      const x = Math.min(window.innerWidth - mapTooltip.offsetWidth - 12, event.clientX + offset);
+      const y = Math.min(window.innerHeight - mapTooltip.offsetHeight - 12, event.clientY + offset);
+      mapTooltip.style.left = `${Math.max(12, x)}px`;
+      mapTooltip.style.top = `${Math.max(12, y)}px`;
+    }
+
+    function hideTooltip() {
+      mapTooltip.style.display = "none";
+    }
+
+    function renderLegendOptions() {
+      const options = ['<option value="">Elegir de la leyenda...</option>'];
+      legendRows().forEach((row, index) => {
+        options.push(`<option value="${index}">${escapeHtml(row.number)} - ${escapeHtml(row.name)}</option>`);
+      });
+      legendSelect.innerHTML = options.join("");
+    }
+
+    function renderMaps() {
+      maps.innerHTML = "";
+      const pages = [state.page];
+      pages.forEach(page => {
+        const wrap = document.createElement("div");
+        wrap.className = "map-wrap";
+        wrap.dataset.page = page;
+        wrap.style.setProperty("--zoom", state.zoom);
+        wrap.innerHTML = `
+          <div class="map-canvas">
+            <img src="${escapeHtml(state.data.pages[page].svg || state.data.pages[page].clean_svg)}" alt="Plano municipal página ${page}">
+            <svg class="overlay" viewBox="0 0 3370 2384" aria-label="Zonas extraídas página ${page}"></svg>
+          </div>
+        `;
+        const svg = wrap.querySelector("svg");
+        state.data.pages[page].zones.forEach((zone, index) => {
+          const fullZone = { ...zone, id: zoneId(page, index), page, index };
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", fullZone.path_d);
+          if (fullZone.transform) path.setAttribute("transform", fullZone.transform);
+          path.setAttribute("fill", "#ffffff");
+          path.dataset.id = fullZone.id;
+          path.setAttribute("tabindex", "0");
+          path.setAttribute("role", "button");
+          path.setAttribute("aria-label", assignmentTitle(assignmentFor(fullZone.id), fullZone.id));
+          path.classList.add("zone-path");
+          if (assignmentFor(fullZone.id)) path.classList.add("assigned-path");
+          if (fullZone.id === state.selectedId) path.classList.add("selected-path");
+          path.addEventListener("click", () => selectZone(fullZone.id));
+          path.addEventListener("mouseenter", event => showTooltip(event, fullZone));
+          path.addEventListener("mousemove", moveTooltip);
+          path.addEventListener("mouseleave", hideTooltip);
+          path.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              selectZone(fullZone.id);
+            }
+          });
+          svg.appendChild(path);
+        });
+        maps.appendChild(wrap);
+      });
+    }
+
+    function renderStats() {
+      const zones = currentZones();
+      const assigned = zones.filter(zone => assignmentFor(zone.id)).length;
+      const auto = zones.filter(zone => assignmentFor(zone.id)?.auto).length;
+      zoneCount.textContent = zones.length;
+      assignedCount.textContent = `${assigned}`;
+      pendingCount.textContent = zones.length - assigned;
+      assignedCount.title = `${auto} asignadas automaticamente por color`;
+    }
+
+    function filteredZones() {
+      const query = normalize(state.search);
+      return currentZones().filter(zone => {
+        const assignment = assignmentFor(zone.id);
+        if (state.onlyPending && assignment) return false;
+        if (!query) return true;
+        const haystack = normalize(`${zone.id} ${assignmentText(assignment)} ${zone.bounds.area}`);
+        return haystack.includes(query);
+      });
+    }
+
+    function renderList() {
+      zoneList.innerHTML = "";
+      filteredZones().forEach(zone => {
+        const assignment = assignmentFor(zone.id);
+        const row = document.createElement("div");
+        row.className = `zone-row ${zone.id === state.selectedId ? "active" : ""} ${assignment ? "assigned" : ""}`;
+        row.innerHTML = `
+          <strong><span class="swatch" style="background:${rgbPercentToCss(zone.fill_rgb_percent)}"></span>${escapeHtml(zone.id)}</strong>
+          ${escapeHtml(assignmentText(assignment))}<br>
+          <small>area ${Math.round(zone.bounds.area)} · x ${Math.round(zone.bounds.x)} · y ${Math.round(zone.bounds.y)}</small>
+        `;
+        row.addEventListener("click", () => selectZone(zone.id));
+        zoneList.appendChild(row);
+      });
+    }
+
+    function renderSelected() {
+      const zone = selectedZone();
+      const disabled = !zone;
+      [legendSelect, customName, zoneType, notes, saveAssignment, clearAssignment, zoomZone].forEach(item => {
+        item.disabled = disabled;
+      });
+
+      if (!zone) {
+        selectedTitle.textContent = "Sin zona seleccionada";
+        selectedArea.textContent = "-";
+        legendSelect.value = "";
+        customName.value = "";
+        zoneType.value = "barrio_loteo";
+        notes.value = "";
+        return;
+      }
+
+      const assignment = assignmentFor(zone.id);
+      selectedTitle.textContent = zone.id;
+      selectedArea.textContent = `area ${Math.round(zone.bounds.area)}`;
+      customName.value = assignment?.customName || "";
+      zoneType.value = assignment?.type || "barrio_loteo";
+      notes.value = assignment?.notes || "";
+
+      const index = legendRows().findIndex(row =>
+        row.number === assignment?.number && row.name === assignment?.name
+      );
+      legendSelect.value = index >= 0 ? String(index) : "";
+    }
+
+    function renderAll() {
+      tabs.forEach(tab => tab.classList.toggle("active", tab.dataset.page === state.page));
+      renderLegendOptions();
+      renderStats();
+      renderMaps();
+      renderSelected();
+      renderList();
+      notice.textContent = `Mapa ${state.page}: base limpia sin colores originales; los colores quedan reservados para estados/cortes.`;
+    }
+
+    function selectZone(id) {
+      state.selectedId = id;
+      renderMaps();
+      renderLegendOptions();
+      renderSelected();
+      renderList();
+    }
+
+    function saveCurrentAssignment() {
+      const zone = selectedZone();
+      if (!zone) return;
+
+      const legendIndex = legendSelect.value === "" ? -1 : Number(legendSelect.value);
+      const legend = legendRows()[legendIndex] || {};
+      const cleanCustomName = customName.value.trim();
+      const name = cleanCustomName || legend.name || "";
+      const number = legend.number || "";
+
+      state.assignments[zone.id] = {
+        id: zone.id,
+        page: Number(state.page),
+        sourcePathIndex: zone.source_path_index,
+        number,
+        name,
+        customName: cleanCustomName,
+        type: zoneType.value,
+        notes: notes.value.trim(),
+        fillRgbPercent: zone.fill_rgb_percent,
+        bounds: zone.bounds,
+        transform: zone.transform,
+        pathD: zone.path_d,
+        auto: false
+      };
+      saveAssignments();
+      renderAll();
+      selectNextPending(zone.id);
+    }
+
+    function clearCurrentAssignment() {
+      const zone = selectedZone();
+      if (!zone) return;
+      delete state.assignments[zone.id];
+      saveAssignments();
+      renderAll();
+      selectZone(zone.id);
+    }
+
+    function selectNextPending(afterId = "") {
+      const zones = currentZones();
+      const startIndex = Math.max(0, zones.findIndex(zone => zone.id === afterId) + 1);
+      const ordered = zones.slice(startIndex).concat(zones.slice(0, startIndex));
+      const next = ordered.find(zone => !assignmentFor(zone.id)) || ordered[0];
+      if (next) selectZone(next.id);
+    }
+
+    function moveSelection(offset) {
+      const zones = filteredZones();
+      if (!zones.length) return;
+      const index = zones.findIndex(zone => zone.id === state.selectedId);
+      const nextIndex = index < 0 ? 0 : (index + offset + zones.length) % zones.length;
+      selectZone(zones[nextIndex].id);
+    }
+
+    function zoomSelected() {
+      const zone = selectedZone();
+      if (!zone) return;
+      if (state.zoom < 0.75) setZoom(0.9);
+      const page = zone.page || zone.id.match(/^p(\d)-/)?.[1] || state.page;
+      const wrap = document.querySelector(`.map-wrap[data-page="${page}"]`);
+      if (!wrap) return;
+      stage.scrollTo({
+        left: Math.max(0, (zone.bounds.x + zone.bounds.width / 2) * state.zoom - stage.clientWidth / 2),
+        top: Math.max(0, (zone.bounds.y + zone.bounds.height / 2) * state.zoom - stage.clientHeight / 2),
+        behavior: "smooth"
+      });
+    }
+
+    function applyZoom() {
+      document.querySelectorAll(".map-wrap").forEach(wrap => {
+        wrap.style.setProperty("--zoom", state.zoom);
+      });
+      document.querySelector("#zoomReset").textContent = `${Math.round(state.zoom * 100)}`;
+    }
+
+    function setZonesVisibility(visible) {
+      state.showZones = visible;
+      document.body.classList.toggle("hide-zones", !visible);
+      toggleZones.classList.toggle("active", visible);
+      toggleZones.textContent = visible ? "Zonas PDF" : "Zonas ocultas";
+      if (!visible) hideTooltip();
+    }
+
+    function setZoom(nextZoom, anchorEvent = null) {
+      const previous = state.zoom;
+      const next = Math.max(0.25, Math.min(2.2, nextZoom));
+      if (Math.abs(next - previous) < 0.001) return;
+
+      const rect = stage.getBoundingClientRect();
+      const anchorX = anchorEvent ? anchorEvent.clientX - rect.left : stage.clientWidth / 2;
+      const anchorY = anchorEvent ? anchorEvent.clientY - rect.top : stage.clientHeight / 2;
+      const worldX = (stage.scrollLeft + anchorX) / previous;
+      const worldY = (stage.scrollTop + anchorY) / previous;
+
+      state.zoom = next;
+      applyZoom();
+
+      stage.scrollLeft = Math.max(0, worldX * next - anchorX);
+      stage.scrollTop = Math.max(0, worldY * next - anchorY);
+    }
+
+    let dragState = null;
+    stage.addEventListener("wheel", event => {
+      event.preventDefault();
+      const direction = event.deltaY > 0 ? -1 : 1;
+      setZoom(state.zoom * (direction > 0 ? 1.12 : 0.89), event);
+    }, { passive: false });
+
+    stage.addEventListener("mousedown", event => {
+      if (event.button !== 0 || event.target.closest("button, input, select, textarea")) return;
+      dragState = {
+        x: event.clientX,
+        y: event.clientY,
+        left: stage.scrollLeft,
+        top: stage.scrollTop
+      };
+      stage.style.cursor = "grabbing";
+    });
+
+    window.addEventListener("mousemove", event => {
+      if (!dragState) return;
+      stage.scrollLeft = dragState.left - (event.clientX - dragState.x);
+      stage.scrollTop = dragState.top - (event.clientY - dragState.y);
+    });
+
+    window.addEventListener("mouseup", () => {
+      dragState = null;
+      stage.style.cursor = "grab";
+    });
+
+    function exportAssignments() {
+      const payload = {
+        meta: {
+          exportedAt: new Date().toISOString(),
+          source: DATA_URL
+        },
+        zones: Object.values(state.assignments).sort((left, right) =>
+          left.page - right.page || String(left.id).localeCompare(String(right.id))
+        )
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "zonas_finales_revision.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetCurrentPage() {
+      if (!confirm(`¿Limpiar asignaciones de la página ${state.page}?`)) return;
+      currentZones().forEach(zone => delete state.assignments[zone.id]);
+      saveAssignments();
+      state.selectedId = "";
+      renderAll();
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        state.page = tab.dataset.page;
+        state.selectedId = "";
+        renderAll();
+      });
+    });
+
+    search.addEventListener("input", () => {
+      state.search = search.value;
+      renderList();
+    });
+
+    onlyPending.addEventListener("click", () => {
+      state.onlyPending = !state.onlyPending;
+      onlyPending.classList.toggle("primary", state.onlyPending);
+      renderList();
+    });
+
+    saveAssignment.addEventListener("click", saveCurrentAssignment);
+    clearAssignment.addEventListener("click", clearCurrentAssignment);
+    document.querySelector("#prevZone").addEventListener("click", () => moveSelection(-1));
+    document.querySelector("#nextZone").addEventListener("click", () => moveSelection(1));
+    zoomZone.addEventListener("click", zoomSelected);
+    document.querySelector("#zoomOut").addEventListener("click", () => setZoom(state.zoom * 0.85));
+    document.querySelector("#zoomIn").addEventListener("click", () => setZoom(state.zoom * 1.18));
+    document.querySelector("#zoomReset").addEventListener("click", () => setZoom(0.42));
+    toggleZones.addEventListener("click", () => setZonesVisibility(!state.showZones));
+    document.querySelector("#exportJson").addEventListener("click", exportAssignments);
+    document.querySelector("#resetPage").addEventListener("click", resetCurrentPage);
+
+    fetch(DATA_URL)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        state.data = data;
+        seedAutoAssignments();
+        renderAll();
+      })
+      .catch(error => {
+        notice.textContent = `No pude cargar ${DATA_URL}: ${error.message}`;
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Ciudad provisorio">
+  <rect width="240" height="240" rx="36" fill="#f7f9f7"/>
+  <circle cx="120" cy="120" r="86" fill="#ffffff" stroke="#1f6f54" stroke-width="10"/>
+  <path d="M64 139c22-20 40-30 56-30s34 10 56 30" fill="none" stroke="#8ccf59" stroke-width="14" stroke-linecap="round"/>
+  <path d="M76 154h88" stroke="#1f6f54" stroke-width="12" stroke-linecap="round"/>
+  <path d="M92 91h56l-10 47h-36z" fill="#1f6f54"/>
+  <path d="M103 78h34" stroke="#1f6f54" stroke-width="10" stroke-linecap="round"/>
+  <text x="120" y="202" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2933">CIUDAD</text>
+</svg>
